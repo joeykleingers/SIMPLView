@@ -575,9 +575,9 @@ void SIMPLView_UI::disconnectSignalsSlots()
 
   disconnect(this, SIGNAL(bookmarkNeedsToBeAdded(const QString&, const QModelIndex&)), getBookmarksToolboxWidget(), SLOT(addBookmark(const QString&, const QModelIndex&)));
 
-  disconnect(pipelineViewWidget, SIGNAL(filterInputWidgetChanged(FilterInputWidget*)), this, SLOT(setFilterInputWidget(FilterInputWidget*)));
+//  disconnect(pipelineViewWidget, SIGNAL(filterInputWidgetChanged(FilterInputWidget*)), this, SLOT(setFilterInputWidget(FilterInputWidget*)));
 
-  disconnect(pipelineViewWidget, SIGNAL(filterInputWidgetNeedsCleared()), this, SLOT(clearFilterInputWidget()));
+//  disconnect(pipelineViewWidget, SIGNAL(filterInputWidgetNeedsCleared()), this, SLOT(clearFilterInputWidget()));
 
   disconnect(pipelineViewWidget, SIGNAL(filterInputWidgetEdited()), this, SLOT(markDocumentAsDirty()));
 
@@ -601,9 +601,9 @@ void SIMPLView_UI::connectSignalsSlots()
 
   connect(this, SIGNAL(bookmarkNeedsToBeAdded(const QString&, const QModelIndex&)), getBookmarksToolboxWidget(), SLOT(addBookmark(const QString&, const QModelIndex&)));
 
-  connect(pipelineViewWidget, SIGNAL(filterInputWidgetChanged(FilterInputWidget*)), this, SLOT(setFilterInputWidget(FilterInputWidget*)));
+//  connect(pipelineViewWidget, SIGNAL(filterInputWidgetChanged(FilterInputWidget*)), this, SLOT(setFilterInputWidget(FilterInputWidget*)));
 
-  connect(pipelineViewWidget, SIGNAL(filterInputWidgetNeedsCleared()), this, SLOT(clearFilterInputWidget()));
+//  connect(pipelineViewWidget, SIGNAL(filterInputWidgetNeedsCleared()), this, SLOT(clearFilterInputWidget()));
 
   connect(pipelineViewWidget, SIGNAL(filterInputWidgetEdited()), this, SLOT(markDocumentAsDirty()));
 
@@ -1142,9 +1142,6 @@ void SIMPLView_UI::showFilterHelpUrl(const QUrl& helpURL)
 // -----------------------------------------------------------------------------
 void SIMPLView_UI::cleanupPipeline()
 {
-  // Clear the filter input widget
-  clearFilterInputWidget();
-
   pipelineViewWidget->clearFilterWidgets();
   setWindowModified(true);
 }
@@ -1252,41 +1249,6 @@ void SIMPLView_UI::setOpenedFilePath(const QString& filePath)
 void SIMPLView_UI::setOpenDialogLastFilePath(const QString& path)
 {
   m_OpenDialogLastFilePath = path;
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void SIMPLView_UI::setFilterInputWidget(FilterInputWidget* widget)
-{
-  if(widget == nullptr)
-  {
-    return;
-  }
-
-  // Clear the filter input widget
-  clearFilterInputWidget();
-
-  // Set the widget into the frame
-  fiwFrameVLayout->addWidget(widget);
-  widget->show();
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void SIMPLView_UI::clearFilterInputWidget()
-{
-  QLayoutItem* item = fiwFrameVLayout->takeAt(0);
-  if(item)
-  {
-    QWidget* w = item->widget();
-    if(w)
-    {
-      w->hide();
-      w->setParent(nullptr);
-    }
-  }
 }
 
 // -----------------------------------------------------------------------------

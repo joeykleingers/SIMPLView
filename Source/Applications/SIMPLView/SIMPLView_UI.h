@@ -216,11 +216,6 @@ class SIMPLView_UI : public QMainWindow, private Ui::SIMPLView_UI
      */
     void showFilterHelpUrl(const QUrl& url);
 
-    /**
-    * @brief clearFilterInputWidget
-    */
-    void clearFilterInputWidget();
-
   protected slots:
 
     /**
@@ -243,12 +238,6 @@ class SIMPLView_UI : public QMainWindow, private Ui::SIMPLView_UI
     void on_pipelineViewWidget_pipelineIssuesCleared();
     void on_pipelineViewWidget_pipelineHasNoErrors();
     void on_pipelineViewWidget_pipelineOpened(QString& file, const bool& setOpenedFilePath, const bool& changeTitle);
-
-    /**
-    * @brief setFilterInputWidget
-    * @param widget
-    */
-    void setFilterInputWidget(FilterInputWidget* widget);
 
     /**
     * @brief markDocumentAsDirty
