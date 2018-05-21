@@ -83,6 +83,7 @@ set(SIMPLView_SRCS
   ${SIMPLView_SOURCE_DIR}/SIMPLView_UI.cpp
   ${SIMPLView_SOURCE_DIR}/AboutSIMPLView.cpp
   ${SIMPLView_SOURCE_DIR}/SIMPLViewApplication.cpp
+  ${SIMPLView_SOURCE_DIR}/SIMPLViewPipelineDockWidget.cpp
   )
 
 #------------------------------------------------------------------
@@ -98,6 +99,7 @@ SET(SIMPLView_MOC_HDRS
   ${SIMPLView_SOURCE_DIR}/SIMPLView_UI.h
   ${SIMPLView_SOURCE_DIR}/AboutSIMPLView.h
   ${SIMPLView_SOURCE_DIR}/SIMPLViewApplication.h
+  ${SIMPLView_SOURCE_DIR}/SIMPLViewPipelineDockWidget.h
   
   ${VtkSIMPL_Widgets_HDRS}
   ${VtkSIMPL_VtkFilters_HDRS}

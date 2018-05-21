@@ -470,8 +470,20 @@ void SIMPLViewApplication::updateRecentFileList(const QString& file)
 // -----------------------------------------------------------------------------
 void SIMPLViewApplication::listenNewInstanceTriggered()
 {
-  SIMPLView_UI* newInstance = getNewSIMPLViewInstance();
-  newInstance->show();
+  SIMPLView_UI* instance = nullptr;
+  if (m_ActiveWindow != nullptr)
+  {
+    // We already have an instance open, so create another pipeline in the same instance
+    instance = m_ActiveWindow;
+    instance->addPipeline();
+  }
+  else
+  {
+    // Create a new instance
+    instance = getNewSIMPLViewInstance();
+  }
+
+  instance->show();
 }
 
 // -----------------------------------------------------------------------------
@@ -486,7 +498,17 @@ void SIMPLViewApplication::listenOpenPipelineTriggered()
     return;
   }
 
-  newInstanceFromFile(filePath);
+  SIMPLView_UI* instance = nullptr;
+  if (m_ActiveWindow != nullptr)
+  {
+    instance = m_ActiveWindow;
+    instance->openPipeline(filePath);
+  }
+  else
+  {
+    // Open the pipeline in a new instance
+    newInstanceFromFile(filePath);
+  }
 
   // Cache the last directory on old instance
   m_OpenDialogLastFilePath = filePath;
@@ -769,7 +791,6 @@ SIMPLView_UI* SIMPLViewApplication::getNewSIMPLViewInstance()
   SIMPLView_UI* newInstance = new SIMPLView_UI(nullptr);
   newInstance->setLoadedPlugins(plugins);
   newInstance->setAttribute(Qt::WA_DeleteOnClose);
-  newInstance->setWindowTitle("[*]Untitled Pipeline - " + BrandedStrings::ApplicationName);
 
   if (m_ActiveWindow)
   {

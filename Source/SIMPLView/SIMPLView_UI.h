@@ -33,21 +33,20 @@
 *
 * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-
-
-#ifndef _simplview_ui_h_
-#define _simplview_ui_h_
-
+#pragma once
 
 //-- Qt Includes
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QList>
 #include <QtCore/QVector>
+#include <QtCore/QSemaphore>
+
+#include <QtGui/QResizeEvent>
+
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMessageBox>
-#include <QtGui/QResizeEvent>
 #include <QtWidgets/QToolBar>
 
 #include "SIMPLib/Filtering/FilterManager.h"
@@ -78,6 +77,8 @@ class PipelineModel;
 class PipelineListWidget;
 class SVPipelineViewWidget;
 class SIMPLViewMenuItems;
+class SIMPLViewPipelineDockWidget;
+class SVPipelineView;
 
 /**
 * @class SIMPLView_UI SIMPLView_UI Applications/SIMPLView/SIMPLView_UI.h
@@ -104,11 +105,31 @@ class SIMPLView_UI : public QMainWindow
     virtual ~SIMPLView_UI();
 
     /**
+     * @brief Adds a new pipeline dock widget, tabbed to the original pipeline dock widget
+     * @return
+     */
+    SIMPLViewPipelineDockWidget* addPipeline();
+
+    /**
+     * @brief removePipeline
+     * @param dockWidget
+     */
+    void removePipeline(SIMPLViewPipelineDockWidget* dockWidget);
+
+    /**
      * @brief setLoadedPlugins This will set the plugins that have already been loaded by another mechanism. The plugins are NOT
      * deleted by this class and the unloading and clean up of the plugin pointers is the responsibility of the caller.
      * @param plugins The plugins that adhere to the ISIMPLibPlugin
      */
     void setLoadedPlugins(QVector<ISIMPLibPlugin*> plugins);
+
+    /**
+     * @brief eventFilter
+     * @param watched
+     * @param event
+     * @return
+     */
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
     /**
      * @brief getDataStructureWidget
@@ -129,14 +150,22 @@ class SIMPLView_UI : public QMainWindow
     /**
      * @brief openPipeline
      * @param filePath
+     * @param execute
      * @return
      */
-    int openPipeline(const QString& filePath);
+    int openPipeline(const QString& filePath, bool execute = false);
 
     /**
-     * @brief executePipeline
+     * @brief getActivePipelineModified
+     * @return
      */
-    void executePipeline();
+    bool isActivePipelineModified();
+
+    /**
+     * @brief isActivePipelineEmpty
+     * @return
+     */
+    bool isActivePipelineEmpty();
 
   public slots:
     /**
@@ -190,6 +219,17 @@ class SIMPLView_UI : public QMainWindow
     * @brief
     */
     void connectSignalsSlots();
+
+    /**
+     * @brief connectPipelineSignalsSlots
+     */
+    void connectActivePipelineSignalsSlots(SIMPLViewPipelineDockWidget *dockWidget);
+
+    /**
+     * @brief disconnectPipelineSignalsSlots
+     * @param dockWidget
+     */
+    void disconnectActivePipelineSignalsSlots(SIMPLViewPipelineDockWidget *dockWidget);
 
     /**
      * @brief Implements the CloseEvent to Quit the application and write settings
@@ -247,10 +287,10 @@ class SIMPLView_UI : public QMainWindow
     void writeHideDockSettings(QtSSettings* prefs, HideDockSetting value);
 
     /**
-     * @brief Checks the currently open file for changes that need to be saved
+     * @brief Checks the specified pipeline for changes that need to be saved
      * @return QMessageBox::StandardButton
      */
-    QMessageBox::StandardButton checkDirtyDocument();
+    QMessageBox::StandardButton checkDirtyPipeline(SIMPLViewPipelineDockWidget* dockWidget);
 
     /**
      * @brief Over ride the resize event
@@ -279,7 +319,7 @@ class SIMPLView_UI : public QMainWindow
     /**
     * @brief markDocumentAsDirty
     */
-    void markDocumentAsDirty();
+    void markActivePipelineAsDirty();
 
     /**
     * @brief issuesTableHasErrors
@@ -299,6 +339,8 @@ class SIMPLView_UI : public QMainWindow
   private:
     QSharedPointer<Ui::SIMPLView_UI>        m_Ui;
     QMenuBar*                               m_SIMPLViewMenu = nullptr;
+    SIMPLViewPipelineDockWidget*            m_ActivePipelineDockWidget = nullptr;
+    std::vector<SIMPLViewPipelineDockWidget*> m_PipelineDockWidgets;
 
     QVector<ISIMPLibPlugin*>                m_LoadedPlugins;
 
@@ -334,6 +376,17 @@ class SIMPLView_UI : public QMainWindow
     QAction*                                m_ActionPluginInformation = nullptr;
     QAction*                                m_ActionClearCache = nullptr;
 
+    QAction*                                m_ActionCut = nullptr;
+    QAction*                                m_ActionCopy = nullptr;
+    QAction*                                m_ActionPaste = nullptr;
+    QAction*                                m_ActionClearPipeline = nullptr;
+    QAction*                                m_ActionUndo = nullptr;
+    QAction*                                m_ActionRedo = nullptr;
+
+    QAction*                                m_EndOfViewMenuSeparator = nullptr;
+
+    QSemaphore                              m_StdOutputLock;
+
     /**
      * @brief createSIMPLViewMenu
      */
@@ -343,23 +396,21 @@ class SIMPLView_UI : public QMainWindow
      * @brief savePipeline
      * @return
      */
-    bool savePipeline();
+    bool savePipeline(SIMPLViewPipelineDockWidget* dockWidget);
 
     /**
      * @brief saveAsPipeline
      * @return
      */
-    bool savePipelineAs();
+    bool savePipelineAs(SIMPLViewPipelineDockWidget* dockWidget);
 
     /**
-     * @brief getPipelineModel
-     * @return
+     * @brief setPipelineDockWidgetAsActive
+     * @param dockWidget
      */
-    PipelineModel* getPipelineModel();
+    void setPipelineDockWidgetAsActive(SIMPLViewPipelineDockWidget *dockWidget);
 
     SIMPLView_UI(const SIMPLView_UI&);    // Copy Constructor Not Implemented
     void operator=(const SIMPLView_UI&);  // Move assignment Not Implemented
 };
-
-#endif /* _SIMPLView_UI_H_ */
 
