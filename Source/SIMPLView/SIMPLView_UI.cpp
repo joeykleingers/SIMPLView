@@ -509,9 +509,6 @@ SIMPLViewPipelineDockWidget* SIMPLView_UI::addPipeline()
   SIMPLViewPipelineDockWidget* dockWidget = new SIMPLViewPipelineDockWidget(this);
   dockWidget->installEventFilter(this);
 
-  // Set the IssuesWidget as a PipelineMessageObserver Object.
-  dockWidget->getPipelineListWidget()->getPipelineView()->addPipelineMessageObserver(this);
-
   QList<SIMPLViewPipelineDockWidget*> pipelineDockWidgets = findChildren<SIMPLViewPipelineDockWidget*>();
   bool dockWidgetAdded = false;
   if (pipelineDockWidgets.size() > 0)
@@ -904,13 +901,6 @@ void SIMPLView_UI::connectActivePipelineSignalsSlots(SIMPLViewPipelineDockWidget
   });
 
   /* Pipeline Model Connections */
-  connect(pipelineModel, &PipelineModel::statusMessageGenerated, [=] (const QString &msg) { setStatusBarMessage(msg); });
-  connect(pipelineModel, &PipelineModel::standardOutputMessageGenerated, [=] (const QString &msg) {
-    m_StdOutputLock.acquire();
-    addStdOutputMessage(msg);
-    m_StdOutputLock.release();
-  });
-
   connect(pipelineModel, &PipelineModel::pipelineDataChanged, [=] {  });
 
   connect(m_ActionCut, &QAction::triggered, pipelineView->getActionCut(), &QAction::trigger);
@@ -937,12 +927,18 @@ void SIMPLView_UI::connectActivePipelineSignalsSlots(SIMPLViewPipelineDockWidget
   });
 
   connect(pipelineView->getActionUndo(), &QAction::changed, [=] {
-    m_ActionUndo->setText(pipelineView->getActionUndo()->text());
-    m_ActionUndo->setEnabled(pipelineView->getActionUndo()->isEnabled());
+    if (m_ActionUndo)
+    {
+      m_ActionUndo->setText(pipelineView->getActionUndo()->text());
+      m_ActionUndo->setEnabled(pipelineView->getActionUndo()->isEnabled());
+    }
   });
   connect(pipelineView->getActionRedo(), &QAction::changed, [=] {
-    m_ActionRedo->setText(pipelineView->getActionRedo()->text());
-    m_ActionRedo->setEnabled(pipelineView->getActionRedo()->isEnabled());
+    if (m_ActionRedo)
+    {
+      m_ActionRedo->setText(pipelineView->getActionRedo()->text());
+      m_ActionRedo->setEnabled(pipelineView->getActionRedo()->isEnabled());
+    }
   });
 }
 
@@ -986,14 +982,11 @@ void SIMPLView_UI::disconnectActivePipelineSignalsSlots(SIMPLViewPipelineDockWid
 
   disconnect(pipelineView, SIGNAL(filterEnabledStateChanged()), this, SLOT(markActivePipelineAsDirty()));
 
-  disconnect(pipelineView, SIGNAL(statusMessage(const QString&)), statusBar(), SLOT(showMessage(const QString&)));
+  disconnect(pipelineView, &SVPipelineView::statusMessage, this, &SIMPLView_UI::setStatusBarMessage);
 
-  disconnect(pipelineView, SIGNAL(stdOutMessage(const QString&)), this, SLOT(addStdOutputMessage(const QString&)));
+  disconnect(pipelineView, &SVPipelineView::stdOutMessage, 0, 0);
 
   /* Pipeline Model Connections */
-  disconnect(pipelineModel, &PipelineModel::statusMessageGenerated, 0, 0);
-  disconnect(pipelineModel, &PipelineModel::standardOutputMessageGenerated, 0, 0);
-
   disconnect(pipelineModel, &PipelineModel::pipelineDataChanged, 0, 0);
 
   disconnect(m_ActionCut, &QAction::triggered, pipelineView->getActionCut(), &QAction::trigger);
@@ -1144,47 +1137,6 @@ QMessageBox::StandardButton SIMPLView_UI::checkDirtyPipeline(SIMPLViewPipelineDo
 void SIMPLView_UI::populateMenus(QObject* plugin)
 {
 
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void SIMPLView_UI::processPipelineMessage(const PipelineMessage& msg)
-{
-//  if(msg.getType() == PipelineMessage::MessageType::StatusMessageAndProgressValue)
-//  {
-//    if(nullptr != this->statusBar())
-//    {
-//      this->statusBar()->showMessage(msg.generateStatusString());
-//    }
-//  }
-//  else if(msg.getType() == PipelineMessage::MessageType::StandardOutputMessage || msg.getType() == PipelineMessage::MessageType::StatusMessage)
-//  {
-//    if(msg.getType() == PipelineMessage::MessageType::StatusMessage)
-//    {
-//      if(nullptr != this->statusBar())
-//      {
-//        this->statusBar()->showMessage(msg.generateStatusString());
-//      }
-//    }
-
-//    // Allow status messages to open the standard output widget
-//    if(HideDockSetting::OnStatusAndError == m_HideStdOutput)
-//    {
-//      m_Ui->stdOutDockWidget->setVisible(true);
-//    }
-
-//    // Allow status messages to open the issuesDockWidget as well
-//    if(HideDockSetting::OnStatusAndError == m_HideErrorTable)
-//    {
-//      m_Ui->issuesDockWidget->setVisible(true);
-//    }
-
-//    QString text = "<span style=\" color:#000000;\" >";
-//    text.append(msg.getText());
-//    text.append("</span>");
-//    m_Ui->stdOutWidget->appendText(text);
-//  }
 }
 
 // -----------------------------------------------------------------------------
@@ -1364,11 +1316,7 @@ void SIMPLView_UI::setStatusBarMessage(const QString& msg)
 // -----------------------------------------------------------------------------
 void SIMPLView_UI::addStdOutputMessage(const QString& msg)
 {
-  QString text = "<span style=\" color:#000000;\" >";
-  text.append(msg);
-  text.append("</span>");
-
-  m_Ui->stdOutWidget->appendText(text);
+  m_Ui->stdOutWidget->appendText(msg);
 
   // Allow status messages to open the standard output widget
   if(HideDockSetting::OnStatusAndError == m_HideStdOutput)
@@ -1434,8 +1382,11 @@ void SIMPLView_UI::setPipelineDockWidgetAsActive(SIMPLViewPipelineDockWidget* do
     QVector<PipelineMessage> issues = viewWidget->getCurrentIssues();
     m_Ui->issuesWidget->displayCachedMessages(issues);
 
-    QString stdOut = viewWidget->getCurrentStandardOutput();
-    m_Ui->stdOutWidget->setText(stdOut);
+    QStringList stdOutList = viewWidget->getCurrentStandardOutput();
+    for (int i = 0; i < stdOutList.size(); i++)
+    {
+      m_Ui->stdOutWidget->appendText(stdOutList[i]);
+    }
     m_StdOutputLock.release();
  }
 

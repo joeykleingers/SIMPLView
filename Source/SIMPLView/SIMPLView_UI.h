@@ -305,12 +305,6 @@ class SIMPLView_UI : public QMainWindow
     void pipelineDidFinish();
 
     /**
-     * @brief processPipelineMessage
-     * @param msg
-     */
-    void processPipelineMessage(const PipelineMessage& msg);
-
-    /**
     * @brief setFilterInputWidget
     * @param widget
     */
