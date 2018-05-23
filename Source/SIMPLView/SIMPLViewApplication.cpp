@@ -915,7 +915,12 @@ void SIMPLViewApplication::unregisterSIMPLViewWindow(SIMPLView_UI* window)
 bool SIMPLViewApplication::event(QEvent* event)
 {
   #if defined(Q_OS_MAC)
-  if (event->type() == QEvent::FileOpen)
+  if (event->type() == QEvent::Close)
+  {
+    // We are already handling this event past this point, so don't pass it on
+    return false;
+  }
+  else if (event->type() == QEvent::FileOpen)
   {
     QFileOpenEvent* openEvent = static_cast<QFileOpenEvent*>(event);
     QString filePath = openEvent->file();
