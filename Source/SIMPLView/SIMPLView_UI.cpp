@@ -115,7 +115,6 @@ SIMPLView_UI::SIMPLView_UI(QWidget* parent)
 , m_FilterManager(nullptr)
 , m_FilterWidgetManager(nullptr)
 , m_OpenedFilePath("")
-, m_StdOutputLock(1)
 {
   m_OpenedFilePath = QDir::homePath();
 
@@ -605,6 +604,9 @@ SIMPLViewPipelineDockWidget* SIMPLView_UI::addPipeline()
     }
   });
 
+  connect(pipelineView, &SVPipelineView::pipelineFinished, pipelineListWidget, &PipelineListWidget::pipelineFinished);
+  connect(pipelineView, &SVPipelineView::pipelineFinished, this, &SIMPLView_UI::pipelineDidFinish);
+
   return dockWidget;
 }
 
@@ -840,6 +842,15 @@ void SIMPLView_UI::connectActivePipelineSignalsSlots(SIMPLViewPipelineDockWidget
   connect(m_Ui->filterListWidget, &FilterListToolboxWidget::filterItemDoubleClicked, pipelineView, &SVPipelineView::addFilterFromClassName);
 
   /* Pipeline View Connections */
+  QTextEdit* stdOutTextEdit = pipelineView->getStdOutputTextEdit();
+  connect(stdOutTextEdit, &QTextEdit::textChanged, [=] {
+    // Allow new messages to open the standard output widget
+    if(HideDockSetting::OnStatusAndError == m_HideStdOutput)
+    {
+      m_Ui->stdOutDockWidget->setVisible(true);
+    }
+  });
+
   connect(pipelineView, &SVPipelineView::filterParametersChanged, m_Ui->dataBrowserWidget, &DataStructureWidget::filterActivated);
 
   connect(pipelineView, &SVPipelineView::clearDataStructureWidgetTriggered, [=] {
@@ -861,8 +872,6 @@ void SIMPLView_UI::connectActivePipelineSignalsSlots(SIMPLViewPipelineDockWidget
   connect(pipelineView, &SVPipelineView::clearIssuesTriggered, m_Ui->issuesWidget, &IssuesWidget::clearIssues);
 
   connect(pipelineView, &SVPipelineView::writeSIMPLViewSettingsTriggered, [=] { writeSettings(); });
-
-  connect(pipelineView, &SVPipelineView::pipelineFinished, this, &SIMPLView_UI::pipelineDidFinish);
 
   connect(pipelineView, &SVPipelineView::pipelineFilePathUpdated, this, &SIMPLView_UI::setWindowFilePath);
 
@@ -893,12 +902,6 @@ void SIMPLView_UI::connectActivePipelineSignalsSlots(SIMPLViewPipelineDockWidget
   connect(pipelineView, SIGNAL(filterEnabledStateChanged()), this, SLOT(markActivePipelineAsDirty()));
 
   connect(pipelineView, &SVPipelineView::statusMessage, this, &SIMPLView_UI::setStatusBarMessage);
-
-  connect(pipelineView, &SVPipelineView::stdOutMessage, [=] (const QString &msg) {
-    m_StdOutputLock.acquire();
-    addStdOutputMessage(msg);
-    m_StdOutputLock.release();
-  });
 
   /* Pipeline Model Connections */
   connect(pipelineModel, &PipelineModel::pipelineDataChanged, [=] {  });
@@ -958,6 +961,9 @@ void SIMPLView_UI::disconnectActivePipelineSignalsSlots(SIMPLViewPipelineDockWid
   disconnect(m_Ui->filterListWidget, &FilterListToolboxWidget::filterItemDoubleClicked, pipelineView, &SVPipelineView::addFilterFromClassName);
 
   /* Pipeline View Connections */
+  QTextEdit* stdOutTextEdit = pipelineView->getStdOutputTextEdit();
+  disconnect(stdOutTextEdit, &QTextEdit::textChanged, 0, 0);
+
   disconnect(pipelineView, &SVPipelineView::filterParametersChanged, m_Ui->dataBrowserWidget, &DataStructureWidget::filterActivated);
 
   disconnect(pipelineView, &SVPipelineView::clearDataStructureWidgetTriggered, 0, 0);
@@ -970,8 +976,6 @@ void SIMPLView_UI::disconnectActivePipelineSignalsSlots(SIMPLViewPipelineDockWid
 
   disconnect(pipelineView, &SVPipelineView::writeSIMPLViewSettingsTriggered, 0, 0);
 
-  disconnect(pipelineView, &SVPipelineView::pipelineFinished, this, &SIMPLView_UI::pipelineDidFinish);
-
   disconnect(pipelineView, &SVPipelineView::pipelineFilePathUpdated, this, &SIMPLView_UI::setWindowFilePath);
 
   disconnect(pipelineView, &SVPipelineView::pipelineChanged, 0, 0);
@@ -983,8 +987,6 @@ void SIMPLView_UI::disconnectActivePipelineSignalsSlots(SIMPLViewPipelineDockWid
   disconnect(pipelineView, SIGNAL(filterEnabledStateChanged()), this, SLOT(markActivePipelineAsDirty()));
 
   disconnect(pipelineView, &SVPipelineView::statusMessage, this, &SIMPLView_UI::setStatusBarMessage);
-
-  disconnect(pipelineView, &SVPipelineView::stdOutMessage, 0, 0);
 
   /* Pipeline Model Connections */
   disconnect(pipelineModel, &PipelineModel::pipelineDataChanged, 0, 0);
@@ -1027,27 +1029,14 @@ void SIMPLView_UI::connectSignalsSlots()
 // -----------------------------------------------------------------------------
 bool SIMPLView_UI::eventFilter(QObject* watched, QEvent* event)
 {
-  if (dynamic_cast<SIMPLViewPipelineDockWidget*>(watched) != nullptr && event->type() == QEvent::ZOrderChange)
-  {
-    SIMPLViewPipelineDockWidget* pipelineDockWidget = dynamic_cast<SIMPLViewPipelineDockWidget*>(watched);
-    if (m_ActivePipelineDockWidget != nullptr && m_ActivePipelineDockWidget == pipelineDockWidget)
-    {
-      QList<QDockWidget*> dockWidgets = tabifiedDockWidgets(m_ActivePipelineDockWidget);
-      for (int i = 0; i < dockWidgets.size(); i++)
-      {
-        SIMPLViewPipelineDockWidget* tabbedPipeline = dynamic_cast<SIMPLViewPipelineDockWidget*>(dockWidgets[i]);
-        if (tabbedPipeline != nullptr && tabbedPipeline->isVisible())
-        {
-          setPipelineDockWidgetAsActive(tabbedPipeline);
-        }
-      }
-    }
-  }
-
-  if (dynamic_cast<SIMPLViewPipelineDockWidget*>(watched) == m_ActivePipelineDockWidget)
-  {
-//    qDebug() << event->type();
-  }
+//  if (dynamic_cast<SIMPLViewPipelineDockWidget*>(watched) != nullptr && event->type() == QEvent::ZOrderChange)
+//  {
+//    SIMPLViewPipelineDockWidget* pipelineDockWidget = dynamic_cast<SIMPLViewPipelineDockWidget*>(watched);
+//    if (m_ActivePipelineDockWidget != nullptr && pipelineDockWidget->isVisible())
+//    {
+//      setPipelineDockWidgetAsActive(pipelineDockWidget);
+//    }
+//  }
 
   return QMainWindow::eventFilter(watched, event);
 }
@@ -1167,8 +1156,6 @@ void SIMPLView_UI::pipelineDidFinish()
   {
     m_Ui->dataBrowserWidget->filterActivated(AbstractFilter::NullPointer());
   }
-
-  listWidget->pipelineFinished();
 }
 
 // -----------------------------------------------------------------------------
@@ -1303,26 +1290,6 @@ void SIMPLView_UI::issuesTableHasErrors(bool hasErrors, int errCount, int warnCo
 void SIMPLView_UI::setStatusBarMessage(const QString& msg)
 {
   m_Ui->statusbar->showMessage(msg);
-
-  // Allow status messages to open the standard output widget
-  if(HideDockSetting::OnStatusAndError == m_HideStdOutput)
-  {
-    m_Ui->stdOutDockWidget->setVisible(true);
-  }
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void SIMPLView_UI::addStdOutputMessage(const QString& msg)
-{
-  m_Ui->stdOutWidget->appendText(msg);
-
-  // Allow status messages to open the standard output widget
-  if(HideDockSetting::OnStatusAndError == m_HideStdOutput)
-  {
-    m_Ui->stdOutDockWidget->setVisible(true);
-  }
 }
 
 // -----------------------------------------------------------------------------
@@ -1358,7 +1325,7 @@ void SIMPLView_UI::setPipelineDockWidgetAsActive(SIMPLViewPipelineDockWidget* do
     m_ActionRedo->setEnabled(false);
 
     m_Ui->issuesWidget->clearIssues();
-    m_Ui->stdOutWidget->clear();
+    m_Ui->statusbar->clearMessage();
   }
 
   if (dockWidget)
@@ -1367,7 +1334,6 @@ void SIMPLView_UI::setPipelineDockWidgetAsActive(SIMPLViewPipelineDockWidget* do
     dockWidget->setActive(true);
 
     connectActivePipelineSignalsSlots(dockWidget);
-    m_StdOutputLock.acquire();
 
     SVPipelineView* viewWidget = dockWidget->getPipelineListWidget()->getPipelineView();
     m_ActionCut->setEnabled(viewWidget->getActionCut()->isEnabled());
@@ -1382,13 +1348,13 @@ void SIMPLView_UI::setPipelineDockWidgetAsActive(SIMPLViewPipelineDockWidget* do
     QVector<PipelineMessage> issues = viewWidget->getCurrentIssues();
     m_Ui->issuesWidget->displayCachedMessages(issues);
 
-    QStringList stdOutList = viewWidget->getCurrentStandardOutput();
-    for (int i = 0; i < stdOutList.size(); i++)
-    {
-      m_Ui->stdOutWidget->appendText(stdOutList[i]);
-    }
-    m_StdOutputLock.release();
- }
+    QTextEdit* stdOutTextEdit = viewWidget->getStdOutputTextEdit();
+    m_Ui->stdOutWidget->setStdOutputTextEdit(stdOutTextEdit);
+  }
+  else
+  {
+    m_Ui->stdOutWidget->setStdOutputTextEdit(nullptr);
+  }
 
   m_ActivePipelineDockWidget = dockWidget;
 }

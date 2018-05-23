@@ -175,12 +175,6 @@ class SIMPLView_UI : public QMainWindow
     void setStatusBarMessage(const QString& msg);
 
     /**
-    * @brief addStdOutputMessage
-    * @param msg
-    */
-    void addStdOutputMessage(const QString& msg);
-
-    /**
      * @brief showFilterHelp
      * @param className
      */
@@ -334,6 +328,7 @@ class SIMPLView_UI : public QMainWindow
     QSharedPointer<Ui::SIMPLView_UI>        m_Ui;
     QMenuBar*                               m_SIMPLViewMenu = nullptr;
     SIMPLViewPipelineDockWidget*            m_ActivePipelineDockWidget = nullptr;
+    QTextEdit*                              m_CurrentStdOutputTextEdit = nullptr;
     std::vector<SIMPLViewPipelineDockWidget*> m_PipelineDockWidgets;
 
     QVector<ISIMPLibPlugin*>                m_LoadedPlugins;
@@ -378,8 +373,6 @@ class SIMPLView_UI : public QMainWindow
     QAction*                                m_ActionRedo = nullptr;
 
     QAction*                                m_EndOfViewMenuSeparator = nullptr;
-
-    QSemaphore                              m_StdOutputLock;
 
     /**
      * @brief createSIMPLViewMenu
