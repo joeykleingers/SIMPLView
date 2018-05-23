@@ -198,7 +198,7 @@ bool SIMPLView_UI::savePipeline(SIMPLViewPipelineDockWidget* dockWidget)
   if(dockWidget->isWindowModified() == true)
   {
     QString filePath;
-    if(m_OpenedFilePath.isEmpty())
+    if(dockWidget->windowFilePath().isEmpty())
     {
       // When the file hasn't been saved before, the same functionality as a "Save As" occurs...
       return savePipelineAs(dockWidget);
@@ -508,17 +508,36 @@ SIMPLViewPipelineDockWidget* SIMPLView_UI::addPipeline()
   SIMPLViewPipelineDockWidget* dockWidget = new SIMPLViewPipelineDockWidget(this);
   dockWidget->installEventFilter(this);
 
+  m_PipelineDockWidgets.push_back(dockWidget);
+
+  insertPipelineDockWidget(dockWidget);
+
+  connectPipelineSignalsSlots(dockWidget);
+
+  if (!m_ActivePipelineDockWidget)
+  {
+    setPipelineDockWidgetAsActive(dockWidget);
+  }
+
+  return dockWidget;
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void SIMPLView_UI::insertPipelineDockWidget(SIMPLViewPipelineDockWidget* pipelineDockWidget)
+{
   QList<SIMPLViewPipelineDockWidget*> pipelineDockWidgets = findChildren<SIMPLViewPipelineDockWidget*>();
   bool dockWidgetAdded = false;
   if (pipelineDockWidgets.size() > 0)
   {
     for (int i = 0; i < pipelineDockWidgets.size() && dockWidgetAdded == false; i++)
     {
-      SIMPLViewPipelineDockWidget* pipelineDockWidget = pipelineDockWidgets[i];
-      Qt::DockWidgetArea dockWidgetArea = this->dockWidgetArea(pipelineDockWidget);
+      SIMPLViewPipelineDockWidget* dw = pipelineDockWidgets[i];
+      Qt::DockWidgetArea dockWidgetArea = this->dockWidgetArea(dw);
       if (dockWidgetArea != Qt::NoDockWidgetArea && dockWidgetArea != Qt::AllDockWidgetAreas)
       {
-        tabifyDockWidget(pipelineDockWidget, dockWidget);
+        tabifyDockWidget(dw, pipelineDockWidget);
         dockWidgetAdded = true;
       }
     }
@@ -526,38 +545,35 @@ SIMPLViewPipelineDockWidget* SIMPLView_UI::addPipeline()
 
   if (dockWidgetAdded == false)
   {
-    addDockWidget(Qt::LeftDockWidgetArea, dockWidget);
+    addDockWidget(Qt::LeftDockWidgetArea, pipelineDockWidget);
   }
 
   if (!m_EndOfViewMenuSeparator)
   {
-    m_MenuView->addAction(dockWidget->toggleViewAction());
+    m_MenuView->addAction(pipelineDockWidget->toggleViewAction());
     m_EndOfViewMenuSeparator = m_MenuView->addSeparator();
   }
   else
   {
-    m_MenuView->insertAction(m_EndOfViewMenuSeparator, dockWidget->toggleViewAction());
+    m_MenuView->insertAction(m_EndOfViewMenuSeparator, pipelineDockWidget->toggleViewAction());
   }
+}
 
-  m_PipelineDockWidgets.push_back(dockWidget);
-
-  PipelineListWidget* pipelineListWidget = dockWidget->getPipelineListWidget();
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void SIMPLView_UI::connectPipelineSignalsSlots(SIMPLViewPipelineDockWidget* pipelineDockWidget)
+{
+  PipelineListWidget* pipelineListWidget = pipelineDockWidget->getPipelineListWidget();
   SVPipelineView* pipelineView = pipelineListWidget->getPipelineView();
 
-  connect(pipelineView, &SVPipelineView::pipelineActivated, [=] {
-    if (dockWidget != m_ActivePipelineDockWidget)
-    {
-      setPipelineDockWidgetAsActive(dockWidget);
-    }
-  });
-
   connect(pipelineView, &SVPipelineView::pipelineDeleting, [=] {
-    removePipeline(dockWidget);
+    removePipeline(pipelineDockWidget);
   });
 
   // Connection that displays issues in the Issue Table when the preflight is finished
   connect(pipelineView, &SVPipelineView::preflightFinished, [=] (FilterPipeline::Pointer pipeline, int err) {
-    if (dockWidget == m_ActivePipelineDockWidget)
+    if (pipelineDockWidget == m_ActivePipelineDockWidget)
     {
       m_Ui->dataBrowserWidget->refreshData();
 
@@ -570,19 +586,24 @@ SIMPLViewPipelineDockWidget* SIMPLView_UI::addPipeline()
 
   // This connection fires when a pipeline has been activated.  It handles clearing all the other pipelines' selections so that only one pipeline
   // has selections at any one time.  We can't do this in the "selectionChanged" connection because it would cause recursion.
-  connect(dockWidget->getPipelineListWidget()->getPipelineView(), &SVPipelineView::pipelineActivated, [=] {
+  connect(pipelineDockWidget->getPipelineListWidget()->getPipelineView(), &SVPipelineView::pipelineActivated, [=] {
     QList<SIMPLViewPipelineDockWidget*> pipelineDockWidgets = findChildren<SIMPLViewPipelineDockWidget*>();
     for (int i = 0; i < pipelineDockWidgets.size(); i++)
     {
       SIMPLViewPipelineDockWidget* pipelineDockWidget = pipelineDockWidgets[i];
-      if (pipelineDockWidget != dockWidget)
+      if (pipelineDockWidget != pipelineDockWidget)
       {
         pipelineDockWidget->getPipelineListWidget()->getPipelineView()->clearSelection();
       }
     }
+
+    if (pipelineDockWidget != m_ActivePipelineDockWidget)
+    {
+      setPipelineDockWidgetAsActive(pipelineDockWidget);
+    }
   });
 
-  connect(dockWidget->getPipelineListWidget()->getPipelineView()->selectionModel(), &QItemSelectionModel::selectionChanged, [=] {
+  connect(pipelineDockWidget->getPipelineListWidget()->getPipelineView()->selectionModel(), &QItemSelectionModel::selectionChanged, [=] {
     QModelIndexList selectedIndexes = pipelineView->selectionModel()->selectedRows();
     qSort(selectedIndexes);
 
@@ -607,7 +628,12 @@ SIMPLViewPipelineDockWidget* SIMPLView_UI::addPipeline()
   connect(pipelineView, &SVPipelineView::pipelineFinished, pipelineListWidget, &PipelineListWidget::pipelineFinished);
   connect(pipelineView, &SVPipelineView::pipelineFinished, this, &SIMPLView_UI::pipelineDidFinish);
 
-  return dockWidget;
+  connect(pipelineDockWidget, &SIMPLViewPipelineDockWidget::visibilityChanged, [=] (bool visible) {
+    if (visible == true && tabifiedDockWidgets(pipelineDockWidget).isEmpty() == false)
+    {
+      setPipelineDockWidgetAsActive(pipelineDockWidget);
+    }
+  });
 }
 
 // -----------------------------------------------------------------------------
@@ -651,8 +677,7 @@ void SIMPLView_UI::setupGui()
 
   createSIMPLViewMenuSystem();
 
-  SIMPLViewPipelineDockWidget* pipelineDockWidget = addPipeline();
-  setPipelineDockWidgetAsActive(pipelineDockWidget);
+  addPipeline();
   
   // Hook up the signals from the various docks to the PipelineViewWidget that will either add a filter
   // or load an entire pipeline into the view
@@ -873,7 +898,7 @@ void SIMPLView_UI::connectActivePipelineSignalsSlots(SIMPLViewPipelineDockWidget
 
   connect(pipelineView, &SVPipelineView::writeSIMPLViewSettingsTriggered, [=] { writeSettings(); });
 
-  connect(pipelineView, &SVPipelineView::pipelineFilePathUpdated, this, &SIMPLView_UI::setWindowFilePath);
+  connect(pipelineView, &SVPipelineView::pipelineFilePathUpdated, dockWidget, &QDockWidget::setWindowFilePath);
 
   connect(pipelineView, &SVPipelineView::pipelineChanged, [=] {
     markActivePipelineAsDirty();
@@ -909,10 +934,12 @@ void SIMPLView_UI::connectActivePipelineSignalsSlots(SIMPLViewPipelineDockWidget
   connect(m_ActionCut, &QAction::triggered, pipelineView->getActionCut(), &QAction::trigger);
   connect(m_ActionCopy, &QAction::triggered, pipelineView->getActionCopy(), &QAction::trigger);
   connect(m_ActionPaste, &QAction::triggered, pipelineView->getActionPaste(), &QAction::trigger);
+  connect(m_ActionClearPipeline, &QAction::triggered, pipelineView->getActionClearPipeline(), &QAction::trigger);
 
-  connect(pipelineView, &SVPipelineView::cutAvailabilityChanged, [=] (bool enabled) { m_ActionCut->setEnabled(enabled); });
-  connect(pipelineView, &SVPipelineView::copyAvailabilityChanged, [=] (bool enabled) { m_ActionCopy->setEnabled(enabled); });
-  connect(pipelineView, &SVPipelineView::pasteAvailabilityChanged, [=] (bool enabled) { m_ActionPaste->setEnabled(enabled); });
+  connect(pipelineView, &SVPipelineView::cutAvailabilityChanged, m_ActionCut, &QAction::setEnabled);
+  connect(pipelineView, &SVPipelineView::copyAvailabilityChanged, m_ActionCopy, &QAction::setEnabled);
+  connect(pipelineView, &SVPipelineView::pasteAvailabilityChanged, m_ActionPaste, &QAction::setEnabled);
+  connect(pipelineView, &SVPipelineView::clearPipelineAvailabilityChanged, m_ActionClearPipeline, &QAction::setEnabled);
 
   connect(m_ActionUndo, &QAction::triggered, [=] {
     pipelineView->getActionUndo()->trigger();
@@ -976,7 +1003,7 @@ void SIMPLView_UI::disconnectActivePipelineSignalsSlots(SIMPLViewPipelineDockWid
 
   disconnect(pipelineView, &SVPipelineView::writeSIMPLViewSettingsTriggered, 0, 0);
 
-  disconnect(pipelineView, &SVPipelineView::pipelineFilePathUpdated, this, &SIMPLView_UI::setWindowFilePath);
+  disconnect(pipelineView, &SVPipelineView::pipelineFilePathUpdated, dockWidget, &QDockWidget::setWindowFilePath);
 
   disconnect(pipelineView, &SVPipelineView::pipelineChanged, 0, 0);
 
@@ -998,6 +1025,7 @@ void SIMPLView_UI::disconnectActivePipelineSignalsSlots(SIMPLViewPipelineDockWid
   disconnect(pipelineView, &SVPipelineView::cutAvailabilityChanged, 0, 0);
   disconnect(pipelineView, &SVPipelineView::copyAvailabilityChanged, 0, 0);
   disconnect(pipelineView, &SVPipelineView::pasteAvailabilityChanged, 0, 0);
+  disconnect(pipelineView, &SVPipelineView::clearPipelineAvailabilityChanged, 0, 0);
 
   disconnect(m_ActionUndo, &QAction::triggered, 0, 0);
   disconnect(m_ActionRedo, &QAction::triggered, 0, 0);
@@ -1054,10 +1082,6 @@ int SIMPLView_UI::openPipeline(const QString& filePath, bool execute)
   else
   {
     dockWidget = addPipeline();
-    if (!m_ActivePipelineDockWidget)
-    {
-      setPipelineDockWidgetAsActive(dockWidget);
-    }
   }
 
   int err = dockWidget->openPipeline(filePath);
@@ -1068,7 +1092,7 @@ int SIMPLView_UI::openPipeline(const QString& filePath, bool execute)
   }
 
   QFileInfo fi(filePath);
-  dockWidget->setWindowTitle(QString("[*]") + fi.baseName());
+  dockWidget->setWindowTitle(fi.baseName());
   dockWidget->setWindowModified(false);
 
   QtSRecentFileList* list = QtSRecentFileList::Instance();
@@ -1094,7 +1118,7 @@ QMessageBox::StandardButton SIMPLView_UI::checkDirtyPipeline(SIMPLViewPipelineDo
 {
   if(dockWidget->isWindowModified() == true)
   {
-    int r = QMessageBox::warning(this, BrandedStrings::ApplicationName, tr("The Pipeline '%1' has been modified.\nDo you want to save your changes?").arg(dockWidget->windowTitle()), QMessageBox::Save | QMessageBox::Default,
+    int r = QMessageBox::warning(this, BrandedStrings::ApplicationName, tr("The Pipeline '%1' has been modified.\n\nDo you want to save your changes?").arg(dockWidget->windowTitle()), QMessageBox::Save | QMessageBox::Default,
                                  QMessageBox::Discard, QMessageBox::Cancel | QMessageBox::Escape);
     if(r == QMessageBox::Save)
     {
@@ -1318,6 +1342,7 @@ void SIMPLView_UI::setPipelineDockWidgetAsActive(SIMPLViewPipelineDockWidget* do
     m_ActionCut->setEnabled(false);
     m_ActionCopy->setEnabled(false);
     m_ActionPaste->setEnabled(false);
+    m_ActionClearPipeline->setEnabled(false);
 
     m_ActionUndo->setText("Undo");
     m_ActionUndo->setEnabled(false);
@@ -1339,6 +1364,7 @@ void SIMPLView_UI::setPipelineDockWidgetAsActive(SIMPLViewPipelineDockWidget* do
     m_ActionCut->setEnabled(viewWidget->getActionCut()->isEnabled());
     m_ActionCopy->setEnabled(viewWidget->getActionCopy()->isEnabled());
     m_ActionPaste->setEnabled(viewWidget->getActionPaste()->isEnabled());
+    m_ActionClearPipeline->setEnabled(viewWidget->getActionClearPipeline()->isEnabled());
 
     m_ActionUndo->setText(viewWidget->getActionUndo()->text());
     m_ActionUndo->setEnabled(viewWidget->getActionUndo()->isEnabled());

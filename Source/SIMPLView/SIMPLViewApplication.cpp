@@ -81,6 +81,7 @@
 #include "SIMPLView/SIMPLView_UI.h"
 #include "SIMPLView/SIMPLViewVersion.h"
 #include "SIMPLView/SIMPLViewConstants.h"
+#include "SIMPLView/SIMPLViewPipelineDockWidget.h"
 
 #include "BrandedStrings.h"
 
@@ -454,9 +455,18 @@ void SIMPLViewApplication::updateRecentFileList(const QString& file)
   {
     QString filePath = filePaths[i];
     QAction* action = m_MenuRecentFiles->addAction(QtSRecentFileList::Instance()->parentAndFileName(filePath));
-//    action->setVisible(true);
     connect(action, &QAction::triggered, [=] {
-      dream3dApp->newInstanceFromFile(filePath);
+      if (m_ActiveWindow != nullptr)
+      {
+        // We already have an instance open, so create another pipeline in the same instance
+        m_ActiveWindow->openPipeline(filePath);
+      }
+      else
+      {
+        // Create a new instance
+        SIMPLView_UI* instance = newInstanceFromFile(filePath);
+        instance->show();
+      }
     });
   }
 
@@ -470,20 +480,17 @@ void SIMPLViewApplication::updateRecentFileList(const QString& file)
 // -----------------------------------------------------------------------------
 void SIMPLViewApplication::listenNewInstanceTriggered()
 {
-  SIMPLView_UI* instance = nullptr;
   if (m_ActiveWindow != nullptr)
   {
     // We already have an instance open, so create another pipeline in the same instance
-    instance = m_ActiveWindow;
-    instance->addPipeline();
+    m_ActiveWindow->addPipeline();
   }
   else
   {
     // Create a new instance
-    instance = getNewSIMPLViewInstance();
+    SIMPLView_UI* instance = getNewSIMPLViewInstance();
+    instance->show();
   }
-
-  instance->show();
 }
 
 // -----------------------------------------------------------------------------

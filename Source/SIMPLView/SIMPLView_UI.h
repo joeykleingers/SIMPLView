@@ -397,6 +397,17 @@ class SIMPLView_UI : public QMainWindow
      */
     void setPipelineDockWidgetAsActive(SIMPLViewPipelineDockWidget *dockWidget);
 
+    /**
+     * @brief insertPipelineDockWidget
+     * @param pipelineDockWidget
+     */
+    void insertPipelineDockWidget(SIMPLViewPipelineDockWidget* pipelineDockWidget);
+
+    /**
+     * @brief connectPipelineSignalsSlots
+     */
+    void connectPipelineSignalsSlots(SIMPLViewPipelineDockWidget* pipelineDockWidget);
+
     SIMPLView_UI(const SIMPLView_UI&);    // Copy Constructor Not Implemented
     void operator=(const SIMPLView_UI&);  // Move assignment Not Implemented
 };
