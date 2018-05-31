@@ -123,25 +123,16 @@ void SIMPLViewPipelineDockWidget::setActive(bool active)
   m_Active = active;
   m_PipelineListWidget->setActive(active);
 
-  if (active)
-  {
-    QString styleSheet;
-    QTextStream ss(&styleSheet);
+  style()->unpolish(this);
+  style()->polish(this);
+}
 
-    ss << "SIMPLViewPipelineDockWidget {";
-          ss << "font-size: 10px;";
-          ss << "font-weight: bold;";
-      ss << "}";
-      ss << "SIMPLViewPipelineDockWidget::title {";
-          ss << "text-align: center;";
-      ss << "}";
-
-    setStyleSheet(styleSheet);
-  }
-  else
-  {
-    setStyleSheet("");
-  }
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+bool SIMPLViewPipelineDockWidget::getActive()
+{
+  return m_Active;
 }
 
 // -----------------------------------------------------------------------------

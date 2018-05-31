@@ -50,6 +50,8 @@ class SIMPLViewPipelineDockWidget : public QDockWidget
     SIMPLViewPipelineDockWidget(QWidget* parent = 0);
     virtual ~SIMPLViewPipelineDockWidget();
 
+    Q_PROPERTY(bool Active READ getActive WRITE setActive)
+
     /**
      * @brief openPipeline
      * @param filePath
@@ -79,6 +81,12 @@ class SIMPLViewPipelineDockWidget : public QDockWidget
      * @param active
      */
     void setActive(bool active);
+
+    /**
+     * @brief getActive
+     * @return
+     */
+    bool getActive();
 
     /**
      * @brief isPipelineEmpty
