@@ -81,6 +81,7 @@
 #include "SIMPLView/SIMPLView_UI.h"
 #include "SIMPLView/SIMPLViewVersion.h"
 #include "SIMPLView/SIMPLViewConstants.h"
+#include "SIMPLView/SIMPLViewPipelineDockWidget.h"
 
 #include "BrandedStrings.h"
 
@@ -454,9 +455,18 @@ void SIMPLViewApplication::updateRecentFileList(const QString& file)
   {
     QString filePath = filePaths[i];
     QAction* action = m_MenuRecentFiles->addAction(QtSRecentFileList::Instance()->parentAndFileName(filePath));
-//    action->setVisible(true);
     connect(action, &QAction::triggered, [=] {
-      dream3dApp->newInstanceFromFile(filePath);
+      if (m_ActiveWindow != nullptr)
+      {
+        // We already have an instance open, so create another pipeline in the same instance
+        m_ActiveWindow->openPipeline(filePath);
+      }
+      else
+      {
+        // Create a new instance
+        SIMPLView_UI* instance = newInstanceFromFile(filePath);
+        instance->show();
+      }
     });
   }
 
@@ -470,8 +480,17 @@ void SIMPLViewApplication::updateRecentFileList(const QString& file)
 // -----------------------------------------------------------------------------
 void SIMPLViewApplication::listenNewInstanceTriggered()
 {
-  SIMPLView_UI* newInstance = getNewSIMPLViewInstance();
-  newInstance->show();
+  if (m_ActiveWindow != nullptr)
+  {
+    // We already have an instance open, so create another pipeline in the same instance
+    m_ActiveWindow->addPipeline();
+  }
+  else
+  {
+    // Create a new instance
+    SIMPLView_UI* instance = getNewSIMPLViewInstance();
+    instance->show();
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -486,7 +505,17 @@ void SIMPLViewApplication::listenOpenPipelineTriggered()
     return;
   }
 
-  newInstanceFromFile(filePath);
+  SIMPLView_UI* instance = nullptr;
+  if (m_ActiveWindow != nullptr)
+  {
+    instance = m_ActiveWindow;
+    instance->openPipeline(filePath);
+  }
+  else
+  {
+    // Open the pipeline in a new instance
+    newInstanceFromFile(filePath);
+  }
 
   // Cache the last directory on old instance
   m_OpenDialogLastFilePath = filePath;
@@ -769,7 +798,6 @@ SIMPLView_UI* SIMPLViewApplication::getNewSIMPLViewInstance()
   SIMPLView_UI* newInstance = new SIMPLView_UI(nullptr);
   newInstance->setLoadedPlugins(plugins);
   newInstance->setAttribute(Qt::WA_DeleteOnClose);
-  newInstance->setWindowTitle("[*]Untitled Pipeline - " + BrandedStrings::ApplicationName);
 
   if (m_ActiveWindow)
   {
@@ -887,7 +915,12 @@ void SIMPLViewApplication::unregisterSIMPLViewWindow(SIMPLView_UI* window)
 bool SIMPLViewApplication::event(QEvent* event)
 {
   #if defined(Q_OS_MAC)
-  if (event->type() == QEvent::FileOpen)
+  if (event->type() == QEvent::Close)
+  {
+    // We are already handling this event past this point, so don't pass it on
+    return false;
+  }
+  else if (event->type() == QEvent::FileOpen)
   {
     QFileOpenEvent* openEvent = static_cast<QFileOpenEvent*>(event);
     QString filePath = openEvent->file();
