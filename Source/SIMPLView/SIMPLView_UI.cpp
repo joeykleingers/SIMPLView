@@ -1377,6 +1377,17 @@ void SIMPLView_UI::setPipelineDockWidgetAsActive(SIMPLViewPipelineDockWidget* do
     // Activate the new dock widget
     dockWidget->setActive(true);
 
+    QModelIndexList selectedIndexes = dockWidget->getPipelineListWidget()->getPipelineView()->selectionModel()->selectedRows();
+    if(selectedIndexes.size() == 1)
+    {
+      PipelineModel* model = dockWidget->getPipelineListWidget()->getPipelineView()->getPipelineModel();
+      AbstractFilter::Pointer filter = model->filter(selectedIndexes[0]);
+      if (filter.get() != nullptr)
+      {
+        m_Ui->dataBrowserWidget->filterActivated(filter);
+      }
+    }
+
     connectActivePipelineSignalsSlots(dockWidget);
 
     SVPipelineView* viewWidget = dockWidget->getPipelineListWidget()->getPipelineView();
