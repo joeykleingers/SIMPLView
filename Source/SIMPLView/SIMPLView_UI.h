@@ -113,7 +113,7 @@ class SIMPLView_UI : public QMainWindow
      * @brief removePipeline
      * @param dockWidget
      */
-    void removePipeline(SIMPLViewPipelineDockWidget* dockWidget);
+    bool removePipeline(SIMPLViewPipelineDockWidget* dockWidget);
 
     /**
      * @brief setLoadedPlugins This will set the plugins that have already been loaded by another mechanism. The plugins are NOT

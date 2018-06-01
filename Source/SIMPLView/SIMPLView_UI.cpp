@@ -319,10 +319,10 @@ void SIMPLView_UI::closeEvent(QCloseEvent* event)
     }
   }
 
-  for (int i = 0; i < m_PipelineDockWidgets.size(); i++)
+  while (m_PipelineDockWidgets.size() > 0)
   {
-    QMessageBox::StandardButton choice = checkDirtyPipeline(m_PipelineDockWidgets[i]);
-    if(choice == QMessageBox::Cancel)
+    bool success = removePipeline(m_PipelineDockWidgets[0]);
+    if(success == false)
     {
       event->ignore();
       return;
@@ -639,14 +639,20 @@ void SIMPLView_UI::connectPipelineSignalsSlots(SIMPLViewPipelineDockWidget* pipe
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void SIMPLView_UI::removePipeline(SIMPLViewPipelineDockWidget* dockWidget)
+bool SIMPLView_UI::removePipeline(SIMPLViewPipelineDockWidget* dockWidget)
 {
+  QMessageBox::StandardButton choice = checkDirtyPipeline(dockWidget);
+  if(choice == QMessageBox::Cancel)
+  {
+    return false;
+  }
+
   m_MenuView->removeAction(dockWidget->toggleViewAction());
 
   m_PipelineDockWidgets.erase(std::find(m_PipelineDockWidgets.begin(), m_PipelineDockWidgets.end(), dockWidget));
 
   if (dockWidget == m_ActivePipelineDockWidget)
-  {
+  {    
     QList<SIMPLViewPipelineDockWidget*> pipelineDockWidgets = findChildren<SIMPLViewPipelineDockWidget*>();
     bool pipelineActivated = false;
     for (int i = 0; i < pipelineDockWidgets.size() && !pipelineActivated; i++)
@@ -666,6 +672,7 @@ void SIMPLView_UI::removePipeline(SIMPLViewPipelineDockWidget* dockWidget)
   }
 
   delete dockWidget;
+  return true;
 }
 
 // -----------------------------------------------------------------------------
@@ -1118,8 +1125,8 @@ QMessageBox::StandardButton SIMPLView_UI::checkDirtyPipeline(SIMPLViewPipelineDo
 {
   if(dockWidget->isWindowModified() == true)
   {
-    int r = QMessageBox::warning(this, BrandedStrings::ApplicationName, tr("The Pipeline '%1' has been modified.\n\nDo you want to save your changes?").arg(dockWidget->windowTitle()), QMessageBox::Save | QMessageBox::Default,
-                                 QMessageBox::Discard, QMessageBox::Cancel | QMessageBox::Escape);
+    int r = QMessageBox::warning(this, BrandedStrings::ApplicationName, tr("The Pipeline '%1' has been modified.\n\nDo you want to save your changes?").arg(dockWidget->windowTitle()),
+                                 QMessageBox::Save | QMessageBox::Cancel | QMessageBox::Discard, QMessageBox::Save);
     if(r == QMessageBox::Save)
     {
       if(savePipeline(dockWidget) == true)
