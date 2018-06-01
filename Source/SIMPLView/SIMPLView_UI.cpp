@@ -1353,6 +1353,8 @@ void SIMPLView_UI::setPipelineDockWidgetAsActive(SIMPLViewPipelineDockWidget* do
   {
     m_ActivePipelineDockWidget->setActive(false);
 
+    m_ActivePipelineDockWidget->getPipelineListWidget()->getPipelineView()->clearSelection();
+
     disconnectActivePipelineSignalsSlots(m_ActivePipelineDockWidget);
 
     m_ActionCut->setEnabled(false);
