@@ -123,14 +123,6 @@ class SIMPLView_UI : public QMainWindow
     void setLoadedPlugins(QVector<ISIMPLibPlugin*> plugins);
 
     /**
-     * @brief eventFilter
-     * @param watched
-     * @param event
-     * @return
-     */
-    bool eventFilter(QObject* watched, QEvent* event) override;
-
-    /**
      * @brief getDataStructureWidget
      * @return
      */
@@ -165,6 +157,16 @@ class SIMPLView_UI : public QMainWindow
      * @return
      */
     bool isActivePipelineEmpty();
+
+    /**
+     * @brief Selects the FilterInputWidget tab
+     */
+    void showFilterParameterTab();
+
+    /**
+     * @brief Selects the vizualization tab
+     */
+    void showVisualizationTab();
 
   public slots:
     /**
