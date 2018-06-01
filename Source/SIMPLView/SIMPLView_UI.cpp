@@ -590,10 +590,10 @@ void SIMPLView_UI::connectPipelineSignalsSlots(SIMPLViewPipelineDockWidget* pipe
     QList<SIMPLViewPipelineDockWidget*> pipelineDockWidgets = findChildren<SIMPLViewPipelineDockWidget*>();
     for (int i = 0; i < pipelineDockWidgets.size(); i++)
     {
-      SIMPLViewPipelineDockWidget* pipelineDockWidget = pipelineDockWidgets[i];
-      if (pipelineDockWidget != pipelineDockWidget)
+      SIMPLViewPipelineDockWidget* otherPipelineDockWidget = pipelineDockWidgets[i];
+      if (otherPipelineDockWidget != pipelineDockWidget)
       {
-        pipelineDockWidget->getPipelineListWidget()->getPipelineView()->clearSelection();
+        otherPipelineDockWidget->getPipelineListWidget()->getPipelineView()->clearSelection();
       }
     }
 
