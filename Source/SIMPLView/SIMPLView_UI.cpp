@@ -1100,6 +1100,7 @@ int SIMPLView_UI::openPipeline(const QString& filePath, bool execute)
 
   QFileInfo fi(filePath);
   dockWidget->setWindowTitle(fi.baseName());
+  dockWidget->setObjectName(fi.baseName());
   dockWidget->setWindowModified(false);
 
   QtSRecentFileList* list = QtSRecentFileList::Instance();
