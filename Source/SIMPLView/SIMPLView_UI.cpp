@@ -79,7 +79,7 @@
 #include "SVWidgetsLib/Widgets/PipelineModel.h"
 #include "SVWidgetsLib/Widgets/SVStyle.h"
 #include "SVWidgetsLib/Widgets/StatusBarWidget.h"
-#include "SVWidgetsLib/Widgets/util/AddFilterCommand.h"
+#include "SVWidgetsLib/Widgets/util/AddFilterToModelCommand.h"
 #ifdef SIMPL_USE_QtWebEngine
 #include "SVWidgetsLib/Widgets/SVUserManualDialog.h"
 #else
@@ -502,12 +502,12 @@ void SIMPLView_UI::setupGui()
 
   // Create the model
   PipelineModel* model = new PipelineModel(this);
-  model->setMaxNumberOfPipelines(1);
 
   viewWidget->setModel(model);
 
   // Set the IssuesWidget as a PipelineMessageObserver Object.
   viewWidget->addPipelineMessageObserver(m_Ui->issuesWidget);
+  viewWidget->addPipelineMessageObserver(this);
 
   createSIMPLViewMenuSystem();
 
@@ -697,6 +697,8 @@ void SIMPLView_UI::connectSignalsSlots()
   SVPipelineView* pipelineView = m_Ui->pipelineListWidget->getPipelineView();
   PipelineModel* pipelineModel = pipelineView->getPipelineModel();
 
+  statusBar();
+
   /* Documentation Requester connections */
   DocRequestManager* docRequester = DocRequestManager::Instance();
 
@@ -705,7 +707,9 @@ void SIMPLView_UI::connectSignalsSlots()
   connect(docRequester, SIGNAL(showFilterDocUrl(const QUrl&)), this, SLOT(showFilterHelpUrl(const QUrl&)));
 
   /* Filter Library Widget Connections */
-  connect(m_Ui->filterLibraryWidget, &FilterLibraryToolboxWidget::filterItemDoubleClicked, pipelineView, &SVPipelineView::addFilterFromClassName);
+  connect(m_Ui->filterLibraryWidget, &FilterLibraryToolboxWidget::filterItemDoubleClicked, [=] (const QString &filterName, int insertIndex) {
+    pipelineView->addFilterFromClassName(filterName, insertIndex);
+  });
 
   /* Filter List Widget Connections */
   connect(m_Ui->filterListWidget, &FilterListToolboxWidget::filterItemDoubleClicked, pipelineView, &SVPipelineView::addFilterFromClassName);
@@ -727,31 +731,17 @@ void SIMPLView_UI::connectSignalsSlots()
 
     if(execute)
     {
-      instance->executePipeline();
+      writeSettings();
+      pipelineView->executePipeline();
     }
   });
 
   connect(m_Ui->bookmarksWidget, SIGNAL(updateStatusBar(const QString&)), this, SLOT(setStatusBarMessage(const QString&)));
 
-  /* Pipeline List Widget Connections */
-  connect(m_Ui->pipelineListWidget, &PipelineListWidget::pipelineCanceled, pipelineView, &SVPipelineView::cancelPipeline);
-
   /* Pipeline View Connections */
   connect(pipelineView->selectionModel(), &QItemSelectionModel::selectionChanged, [=](const QItemSelection& selected, const QItemSelection& deselected) {
     QModelIndexList selectedIndexes = pipelineView->selectionModel()->selectedRows();
     qSort(selectedIndexes);
-
-    // Animate a selection border for selected indexes
-    for(const QModelIndex& index : selected.indexes())
-    {
-      new PipelineItemBorderSizeAnimation(pipelineModel, QPersistentModelIndex(index));
-    }
-
-    // Remove selection border from deselected indexes
-    for(const QModelIndex& index : deselected.indexes())
-    {
-      pipelineModel->setData(index, -1, PipelineModel::Roles::BorderSizeRole);
-    }
 
     if(selectedIndexes.size() == 1)
     {
@@ -771,32 +761,15 @@ void SIMPLView_UI::connectSignalsSlots()
     }
   });
 
-  connect(pipelineView, &SVPipelineView::filterParametersChanged, m_Ui->dataBrowserWidget, &DataStructureWidget::filterActivated);
+  connect(pipelineModel, &PipelineModel::filterParametersChanged, m_Ui->dataBrowserWidget, &DataStructureWidget::filterActivated);
 
   connect(pipelineView, &SVPipelineView::clearDataStructureWidgetTriggered, [=] { m_Ui->dataBrowserWidget->filterActivated(AbstractFilter::NullPointer()); });
 
   connect(pipelineView, &SVPipelineView::filterInputWidgetNeedsCleared, this, &SIMPLView_UI::clearFilterInputWidget);
 
-  connect(pipelineView, &SVPipelineView::displayIssuesTriggered, m_Ui->issuesWidget, &IssuesWidget::displayCachedMessages);
-
-  connect(pipelineView, &SVPipelineView::clearIssuesTriggered, m_Ui->issuesWidget, &IssuesWidget::clearIssues);
-
-  connect(pipelineView, &SVPipelineView::writeSIMPLViewSettingsTriggered, [=] { writeSettings(); });
-
-  // Connection that displays issues in the Issue Table when the preflight is finished
-  connect(pipelineView, &SVPipelineView::preflightFinished, [=](FilterPipeline::Pointer pipeline, int err) {
-    m_Ui->dataBrowserWidget->refreshData();
-    m_Ui->issuesWidget->displayCachedMessages();
-    m_Ui->pipelineListWidget->preflightFinished(pipeline, err);
-  });
-
   connect(pipelineView, &SVPipelineView::pipelineHasMessage, this, &SIMPLView_UI::processPipelineMessage);
 
-  connect(pipelineView, &SVPipelineView::pipelineFinished, this, &SIMPLView_UI::pipelineDidFinish);
-
-  connect(pipelineView, &SVPipelineView::pipelineFilePathUpdated, this, &SIMPLView_UI::setWindowFilePath);
-
-  connect(pipelineView, &SVPipelineView::pipelineChanged, [=] {
+  connect(pipelineView, &SVPipelineView::pipelineDataChanged, [=] (const QModelIndex &pipelineIndex) {
     markDocumentAsDirty();
 
     QModelIndexList selectedIndexes = pipelineView->selectionModel()->selectedRows();
@@ -814,6 +787,8 @@ void SIMPLView_UI::connectSignalsSlots()
     {
       m_Ui->dataBrowserWidget->filterActivated(AbstractFilter::NullPointer());
     }
+
+    pipelineView->preflightPipeline(pipelineIndex);
   });
 
   connect(pipelineView, &SVPipelineView::filePathOpened, [=](const QString& filePath) { m_LastOpenedFilePath = filePath; });
@@ -822,13 +797,9 @@ void SIMPLView_UI::connectSignalsSlots()
 
   connect(pipelineView, SIGNAL(filterEnabledStateChanged()), this, SLOT(markDocumentAsDirty()));
 
-  connect(pipelineView, SIGNAL(statusMessage(const QString&)), statusBar(), SLOT(showMessage(const QString&)));
-
-  connect(pipelineView, SIGNAL(stdOutMessage(const QString&)), this, SLOT(addStdOutputMessage(const QString&)));
-
   /* Pipeline Model Connections */
   connect(pipelineModel, &PipelineModel::statusMessageGenerated, [=](const QString& msg) { statusBar()->showMessage(msg); });
-  connect(pipelineModel, &PipelineModel::standardOutputMessageGenerated, [=](const QString& msg) { addStdOutputMessage(msg); });
+  connect(pipelineModel, &PipelineModel::standardOutputMessageGenerated, [=](const QString& msg) { pipelineView->addStdOutputMessage(msg); });
 
   connect(pipelineModel, &PipelineModel::pipelineDataChanged, [=] {});
 }
@@ -856,14 +827,6 @@ int SIMPLView_UI::openPipeline(const QString& filePath)
   setWindowModified(false);
 
   return err;
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void SIMPLView_UI::executePipeline()
-{
-  m_Ui->pipelineListWidget->getPipelineView()->executePipeline();
 }
 
 // -----------------------------------------------------------------------------
@@ -920,20 +883,9 @@ void SIMPLView_UI::populateMenus(QObject* plugin)
 // -----------------------------------------------------------------------------
 void SIMPLView_UI::processPipelineMessage(const PipelineMessage& msg)
 {
-  if(msg.getType() == PipelineMessage::MessageType::ProgressValue)
+  if(msg.getType() == PipelineMessage::MessageType::StatusMessageAndProgressValue && nullptr != this->statusBar())
   {
-    float progValue = static_cast<float>(msg.getProgressValue()) / 100;
-    m_Ui->pipelineListWidget->setProgressValue(progValue);
-  }
-  else if(msg.getType() == PipelineMessage::MessageType::StatusMessageAndProgressValue)
-  {
-    float progValue = static_cast<float>(msg.getProgressValue()) / 100;
-    m_Ui->pipelineListWidget->setProgressValue(progValue);
-
-    if(nullptr != this->statusBar())
-    {
-      this->statusBar()->showMessage(msg.generateStatusString());
-    }
+    this->statusBar()->showMessage(msg.generateStatusString());
   }
   else if(msg.getType() == PipelineMessage::MessageType::StandardOutputMessage || msg.getType() == PipelineMessage::MessageType::StatusMessage)
   {
@@ -962,36 +914,6 @@ void SIMPLView_UI::processPipelineMessage(const PipelineMessage& msg)
     text.append("</span>");
     m_Ui->stdOutWidget->appendText(text);
   }
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void SIMPLView_UI::pipelineDidFinish()
-{
-  // Re-enable FilterListToolboxWidget signals - resume adding filters
-  m_Ui->filterListWidget->blockSignals(false);
-
-  // Re-enable FilterLibraryToolboxWidget signals - resume adding filters
-  m_Ui->filterLibraryWidget->blockSignals(false);
-
-  QModelIndexList selectedIndexes = m_Ui->pipelineListWidget->getPipelineView()->selectionModel()->selectedRows();
-  qSort(selectedIndexes);
-
-  if(selectedIndexes.size() == 1)
-  {
-    QModelIndex selectedIndex = selectedIndexes[0];
-    PipelineModel* model = getPipelineModel();
-
-    AbstractFilter::Pointer filter = model->filter(selectedIndex);
-    m_Ui->dataBrowserWidget->filterActivated(filter);
-  }
-  else
-  {
-    m_Ui->dataBrowserWidget->filterActivated(AbstractFilter::NullPointer());
-  }
-
-  m_Ui->pipelineListWidget->pipelineFinished();
 }
 
 // -----------------------------------------------------------------------------
@@ -1139,17 +1061,6 @@ void SIMPLView_UI::issuesTableHasErrors(bool hasErrors, int errCount, int warnCo
 void SIMPLView_UI::setStatusBarMessage(const QString& msg)
 {
   m_Ui->statusbar->showMessage(msg);
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void SIMPLView_UI::addStdOutputMessage(const QString& msg)
-{
-  QString text = "<span style=\" color:#000000;\" >";
-  text.append(msg);
-  text.append("</span>");
-  m_Ui->stdOutWidget->appendText(text);
 }
 
 // -----------------------------------------------------------------------------

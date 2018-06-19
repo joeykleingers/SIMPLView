@@ -132,23 +132,12 @@ class SIMPLView_UI : public QMainWindow
      */
     int openPipeline(const QString& filePath);
 
-    /**
-     * @brief executePipeline
-     */
-    void executePipeline();
-
   public slots:
     /**
     * @brief setFilterBeingDragged
     * @param msg
     */
     void setStatusBarMessage(const QString& msg);
-
-    /**
-    * @brief addStdOutputMessage
-    * @param msg
-    */
-    void addStdOutputMessage(const QString& msg);
 
     /**
      * @brief showFilterHelp
@@ -258,11 +247,6 @@ class SIMPLView_UI : public QMainWindow
     void resizeEvent ( QResizeEvent* event );
 
   protected slots:
-    /**
-     * @brief pipelineDidFinish
-     */
-    void pipelineDidFinish();
-
     /**
      * @brief processPipelineMessage
      * @param msg
