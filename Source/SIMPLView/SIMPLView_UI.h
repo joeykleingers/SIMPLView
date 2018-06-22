@@ -140,6 +140,12 @@ class SIMPLView_UI : public QMainWindow
     void setStatusBarMessage(const QString& msg);
 
     /**
+    * @brief addStdOutputMessage
+    * @param msg
+    */
+    void addStdOutputMessage(const QString& msg);
+
+    /**
      * @brief showFilterHelp
      * @param className
      */
