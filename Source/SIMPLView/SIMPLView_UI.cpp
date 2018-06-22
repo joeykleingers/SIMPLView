@@ -79,7 +79,6 @@
 #include "SVWidgetsLib/Widgets/PipelineViewController.h"
 #include "SVWidgetsLib/Widgets/SVStyle.h"
 #include "SVWidgetsLib/Widgets/StatusBarWidget.h"
-#include "SVWidgetsLib/Widgets/util/AddFilterToModelCommand.h"
 #ifdef SIMPL_USE_QtWebEngine
 #include "SVWidgetsLib/Widgets/SVUserManualDialog.h"
 #else
