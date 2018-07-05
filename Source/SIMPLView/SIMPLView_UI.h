@@ -92,14 +92,7 @@ class SIMPLView_UI : public QMainWindow
     Q_OBJECT
 
   public:
-    enum class HideDockSetting : int
-    {
-      Ignore = 0,
-      OnError = 1,
-      OnStatusAndError = 2
-    };
-
-    SIMPLView_UI(QWidget* parent = 0);
+    SIMPLView_UI(QWidget* parent = nullptr);
     virtual ~SIMPLView_UI();
 
     /**
@@ -131,6 +124,11 @@ class SIMPLView_UI : public QMainWindow
      * @return
      */
     int openPipeline(const QString& filePath);
+
+    /**
+     * @brief showDockWidget
+     */
+    void showDockWidget(QDockWidget* dockWidget);
 
   public slots:
     /**
@@ -220,25 +218,11 @@ class SIMPLView_UI : public QMainWindow
     void readDockWidgetSettings(QtSSettings* prefs, QDockWidget* dw);
 
     /**
-    * @brief SIMPLView_UI::setupDockWidget
-    * @param prefs
-    * @param value
-    */
-    void readHideDockSettings(QtSSettings* prefs, HideDockSetting& value);
-
-    /**
      * @brief writeDockWidgetSettings
      * @param prefs
      * @param dw
      */
     void writeDockWidgetSettings(QtSSettings* prefs, QDockWidget* dw);
-
-    /**
-    * @brief writeHideDockSettings
-    * @param prefs
-    * @param value
-    */
-    void writeHideDockSettings(QtSSettings* prefs, HideDockSetting value);
 
     /**
      * @brief Checks the currently open file for changes that need to be saved
@@ -251,6 +235,18 @@ class SIMPLView_UI : public QMainWindow
      * @param event The event to process
      */
     void resizeEvent ( QResizeEvent* event );
+
+    /**
+    * @brief activateBookmark
+    * @param filePath
+    * @param execute
+    */
+    void activateBookmark(const QString& filePath, bool execute);
+
+    /**
+    * @brief handlePipelineChanges
+    */
+    void handlePipelineChanges();
 
   protected slots:
     /**
@@ -276,6 +272,13 @@ class SIMPLView_UI : public QMainWindow
     */
     void issuesTableHasErrors(bool hasErrors, int errCount, int warnCount);
 
+    /**
+    * @brief Update the FilterInputWidget based on the updated selection
+    * @param selected
+    * @param deselected
+    */
+    void filterSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
+
     // Our Signals that we can emit custom for this class
   signals:
     void parentResized();
@@ -298,9 +301,6 @@ class SIMPLView_UI : public QMainWindow
 
     QString                                 m_LastOpenedFilePath;
 
-    HideDockSetting                         m_HideErrorTable = HideDockSetting::Ignore;
-    HideDockSetting                         m_HideStdOutput = HideDockSetting::Ignore;
-
     FilterInputWidget*                      m_FilterInputWidget = nullptr;
 
     QMenu*                                  m_MenuFile = nullptr;
@@ -311,6 +311,7 @@ class SIMPLView_UI : public QMainWindow
     QMenu*                                  m_MenuHelp = nullptr;
     QMenu*                                  m_MenuAdvanced = nullptr;
     QMenu*                                  m_MenuThemes = nullptr;
+    QMenu*                                  m_MenuDataDirectory = nullptr;
 
     QAction*                                m_ActionNew = nullptr;
     QAction*                                m_ActionOpen = nullptr;
@@ -325,6 +326,8 @@ class SIMPLView_UI : public QMainWindow
     QAction*                                m_ActionCheckForUpdates = nullptr;
     QAction*                                m_ActionPluginInformation = nullptr;
     QAction*                                m_ActionClearCache = nullptr;
+    QAction*                                m_ActionSetDataFolder = nullptr;
+    QAction*                                m_ActionShowDataFolder = nullptr;
 
     QActionGroup*                           m_ThemeActionGroup = nullptr;
 
