@@ -72,10 +72,9 @@ class UpdateCheck;
 class QToolButton;
 class AboutSIMPLView;
 class StatusBarWidget;
-class PipelineTreeView;
 class PipelineModel;
 class PipelineListWidget;
-class SVPipelineViewWidget;
+class SVPipelineTreeView;
 class SIMPLViewMenuItems;
 
 /**
@@ -123,7 +122,7 @@ class SIMPLView_UI : public QMainWindow
      * @param filePath
      * @return
      */
-    int openPipeline(const QString& filePath);
+    bool openPipeline(const QString& filePath);
 
     /**
      * @brief showDockWidget
@@ -244,9 +243,10 @@ class SIMPLView_UI : public QMainWindow
     void activateBookmark(const QString& filePath, bool execute);
 
     /**
-    * @brief handlePipelineChanges
-    */
-    void handlePipelineChanges();
+     * @brief handlePipelineChanges
+     * @param pipeline
+     */
+    void handlePipelineChanges(FilterPipeline::Pointer pipeline);
 
   protected slots:
     /**
@@ -353,6 +353,12 @@ class SIMPLView_UI : public QMainWindow
      * @return
      */
     PipelineModel* getPipelineModel();
+
+    /**
+     * @brief getPipelineView
+     * @return
+     */
+    SVPipelineTreeView* getPipelineView();
 
     SIMPLView_UI(const SIMPLView_UI&);    // Copy Constructor Not Implemented
     void operator=(const SIMPLView_UI&);  // Move assignment Not Implemented
