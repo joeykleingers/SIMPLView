@@ -159,7 +159,7 @@ SIMPLViewApplication::~SIMPLViewApplication()
   writeSettings();
 
   QtSSettings prefs;
-  if(prefs.value("Program Mode", QString("")) == "Clear Cache")
+  if(prefs.value("Program Mode", QString("")) == "Reset Preferences")
   {
     prefs.clear();
     prefs.setValue("Program Mode", QString("Standard"));
@@ -524,13 +524,13 @@ void SIMPLViewApplication::listenClearSIMPLViewCacheTriggered()
 {
   QMessageBox msgBox;
 
-  QString title = QString("Clear %1 Cache").arg(BrandedStrings::ApplicationName);
+  QString title = QString("Reset %1 Preferences to Default Settings").arg(BrandedStrings::ApplicationName);
   msgBox.setWindowTitle(title);
 
   QString text = QString("Clearing the %1 cache will clear the %1 window settings, and will restore %1 back to its default settings on the program's next run.").arg(BrandedStrings::ApplicationName);
   msgBox.setText(text);
 
-  QString infoText = QString("Clear the %1 cache?").arg(BrandedStrings::ApplicationName);
+  QString infoText = QString("Reset the %1 preferences?").arg(BrandedStrings::ApplicationName);
   msgBox.setInformativeText(infoText);
   msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
   msgBox.setDefaultButton(QMessageBox::No);
@@ -540,8 +540,8 @@ void SIMPLViewApplication::listenClearSIMPLViewCacheTriggered()
   {
     QSharedPointer<QtSSettings> prefs = QSharedPointer<QtSSettings>(new QtSSettings());
 
-    // Set a flag in the preferences file, so that we know that we are in "Clear Cache" mode
-    prefs->setValue("Program Mode", QString("Clear Cache"));
+    // Set a flag in the preferences file, so that we know that we are in "Reset Preferences" mode
+    prefs->setValue("Program Mode", QString("Reset Preferences"));
 
     QMessageBox cacheClearedBox;
     QString title = QString("The cache has been cleared successfully. Please restart %1 for the changes to take effect.").arg(BrandedStrings::ApplicationName);
@@ -995,11 +995,12 @@ void SIMPLViewApplication::readSettings()
   SIMPLDataPathValidator* validator = SIMPLDataPathValidator::Instance();
   QString dataDir = prefs->value("Data Directory", QString()).toString();
 
+
   if (dataDir.isEmpty())
   {
     QString dataDirectory = validator->getSIMPLDataDirectory();
     QString msg = tr("The %1 data directory location has been set to '%2'.\n\nIf you would like to change the data directory location, "
-                     "please choose 'Set %3 Data Directory Location' from the Help menu.").arg(applicationName()).arg(dataDirectory).arg(applicationName());
+                     "please choose 'Set Location...' from the Data Directory menu in the Help menu.").arg(applicationName()).arg(dataDirectory).arg(applicationName());
     QMessageBox::information(nullptr, tr("%1 Data Directory Location").arg(applicationName()), msg, QMessageBox::StandardButton::Ok, QMessageBox::StandardButton::Ok);
   }
   else
@@ -1085,7 +1086,7 @@ void SIMPLViewApplication::createDefaultMenuBar()
   m_ActionPluginInformation = new QAction("Plugin Information", m_DefaultMenuBar);
   m_ActionPluginInformation->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_I));
 
-  m_ActionClearCache = new QAction("Clear Cache", m_DefaultMenuBar);
+  m_ActionClearCache = new QAction("Reset Preferences", m_DefaultMenuBar);
 
   m_ActionShowFilterList = new QAction("Filter List", m_DefaultMenuBar);
   m_ActionShowFilterLibrary = new QAction("Filter Library", m_DefaultMenuBar);

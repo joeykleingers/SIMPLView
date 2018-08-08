@@ -48,8 +48,7 @@
 **
 ****************************************************************************/
 
-#ifndef STYLESHEETEDITOR_H
-#define STYLESHEETEDITOR_H
+#pragma once
 
 #include <QtCore/QFileSystemWatcher>
 #include <QtCore/QSharedPointer>
@@ -69,15 +68,14 @@ public:
   StyleSheetEditor(QWidget* parent = nullptr);
 
 public slots:
-  void updateCurrentStyleSheet(const QString &jsonFilePath);
 
 private slots:
-  void on_styleCombo_activated(const QString& styleName);
-  void on_styleSheetCombo_activated(const QString& styleSheetName);
   void on_reloadButton_stateChanged(int state);
   void qssFileChanged(const QString& filePath);
-  void on_qssFilePath_returnPressed();
-
+  void on_jsonFilePath_returnPressed();
+  void on_cssFilePath_returnPressed();
+  
+  
 private:
   void loadStyleSheet(const QString& sheetName);
 
@@ -86,4 +84,3 @@ private:
   QFileSystemWatcher m_FileWatcher;
 };
 
-#endif
