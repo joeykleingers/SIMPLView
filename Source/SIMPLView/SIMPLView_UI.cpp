@@ -769,7 +769,8 @@ void SIMPLView_UI::connectSignalsSlots()
   connect(pipelineView->getPipelineViewController(), &PipelineViewController::clearIssuesTriggered, m_Ui->issuesWidget, &IssuesWidget::clearIssues);
 
   connect(pipelineView->getPipelineViewController(), &PipelineViewController::statusMessage, [=](const QString& msg) { statusBar()->showMessage(msg); });
-  connect(pipelineView->getPipelineViewController(), &PipelineViewController::stdOutMessage, this, &SIMPLView_UI::addStdOutputMessage);
+  connect(pipelineView->getPipelineViewController(), &PipelineViewController::stdOutMessage, [=](const QString& msg) { addStdOutputMessage(msg); });
+  connect(pipelineView->getPipelineViewController(), &PipelineViewController::errorMessage, [=](const QString& msg) { addStdOutputMessage(msg, QColor(255, 191, 193)); });
 
   connect(pipelineView->getPipelineViewController(), &PipelineViewController::pipelineChanged, this, &SIMPLView_UI::handlePipelineChanges);
 
@@ -1131,9 +1132,9 @@ void SIMPLView_UI::setStatusBarMessage(const QString& msg)
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void SIMPLView_UI::addStdOutputMessage(const QString& msg)
+void SIMPLView_UI::addStdOutputMessage(const QString& msg, QColor textColor)
 {
-  QString text = "<span style=\" color:#000000;\" >";
+  QString text = tr("<span style=\" color:%1;\" >").arg(textColor.name());
   text.append(msg);
   text.append("</span>");
   m_Ui->stdOutWidget->appendText(text);

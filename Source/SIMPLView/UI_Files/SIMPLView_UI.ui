@@ -157,7 +157,14 @@
       <number>0</number>
      </property>
      <item row="0" column="0">
-      <widget class="SVPipelineTreeView" name="pipelineTreeView"/>
+      <widget class="SVPipelineTreeView" name="pipelineTreeView">
+       <property name="selectionMode">
+        <enum>QAbstractItemView::ExtendedSelection</enum>
+       </property>
+       <attribute name="headerVisible">
+        <bool>false</bool>
+       </attribute>
+      </widget>
      </item>
     </layout>
    </widget>

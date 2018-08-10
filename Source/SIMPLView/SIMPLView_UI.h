@@ -147,7 +147,7 @@ class SIMPLView_UI : public QMainWindow
     * @brief addStdOutputMessage
     * @param msg
     */
-    void addStdOutputMessage(const QString& msg);
+    void addStdOutputMessage(const QString& msg, QColor textColor = QColor(0, 0, 0));
 
     /**
      * @brief showFilterHelp
