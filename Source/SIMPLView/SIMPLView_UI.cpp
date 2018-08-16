@@ -75,7 +75,6 @@
 #include "SVWidgetsLib/Widgets/BookmarksToolboxWidget.h"
 #include "SVWidgetsLib/Widgets/BookmarksTreeView.h"
 #include "SVWidgetsLib/Widgets/FilterLibraryToolboxWidget.h"
-#include "SVWidgetsLib/Widgets/PipelineItemDelegate.h"
 #include "SVWidgetsLib/Widgets/PipelineListWidget.h"
 #include "SVWidgetsLib/Widgets/PipelineModel.h"
 #include "SVWidgetsLib/Widgets/PipelineViewController.h"
@@ -624,10 +623,10 @@ void SIMPLView_UI::createSIMPLViewMenuSystem()
 
   // Pipeline View Actions
   PipelineView* viewWidget = getPipelineView();
-  QAction* actionCut = viewWidget->getActionCut();
-  QAction* actionCopy = viewWidget->getActionCopy();
-  QAction* actionPaste = viewWidget->getActionPaste();
-  QAction* actionClearPipeline = viewWidget->getActionClearPipeline();
+  QAction* actionCut = viewWidget->getPipelineViewController()->getActionCut();
+  QAction* actionCopy = viewWidget->getPipelineViewController()->getActionCopy();
+  QAction* actionPaste = viewWidget->getPipelineViewController()->getActionPaste();
+  QAction* actionClearPipeline = viewWidget->getPipelineViewController()->getActionClearPipeline();
   QAction* actionUndo = viewWidget->getActionUndo();
   QAction* actionRedo = viewWidget->getActionRedo();
 
@@ -765,6 +764,8 @@ void SIMPLView_UI::connectSignalsSlots()
   connect(abstractItemView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &SIMPLView_UI::filterSelectionChanged);
 
   connect(pipelineModel, &PipelineModel::filterParametersChanged, m_Ui->dataBrowserWidget, &DataStructureWidget::filterActivated);
+  connect(pipelineModel, &PipelineModel::statusMessage, [=](const QString& msg) { statusBar()->showMessage(msg); });
+  connect(pipelineModel, &PipelineModel::stdOutMessage, [=](const QString& msg) { addStdOutputMessage(msg); });
 
   connect(pipelineView->getPipelineViewController(), &PipelineViewController::clearIssuesTriggered, m_Ui->issuesWidget, &IssuesWidget::clearIssues);
 
@@ -1036,11 +1037,6 @@ void SIMPLView_UI::filterSelectionChanged(const QItemSelection& selected, const 
 // -----------------------------------------------------------------------------
 void SIMPLView_UI::setFilterInputWidget(FilterInputWidget* widget)
 {
-  if(widget == nullptr)
-  {
-    return;
-  }
-
   if(m_FilterInputWidget)
   {
     emit m_FilterInputWidget->endPathFiltering();
@@ -1050,6 +1046,11 @@ void SIMPLView_UI::setFilterInputWidget(FilterInputWidget* widget)
 
   // Clear the filter input widget
   clearFilterInputWidget();
+
+  if(widget == nullptr)
+  {
+    return;
+  }
 
   // Alert to DataArrayPath requirements
   connect(widget, SIGNAL(viewPathsMatchingReqs(DataContainerSelectionFilterParameter::RequirementType)), getDataStructureWidget(),
