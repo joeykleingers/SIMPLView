@@ -481,8 +481,12 @@ void SIMPLViewApplication::updateRecentFileList(const QString& file)
 // -----------------------------------------------------------------------------
 void SIMPLViewApplication::listenNewInstanceTriggered()
 {
-  SIMPLView_UI* newInstance = getNewSIMPLViewInstance();
-  newInstance->show();
+  if (m_ActiveWindow)
+  {
+    FilterPipeline::Pointer pipeline = FilterPipeline::New();
+    pipeline->setName("Untitled");
+    m_ActiveWindow->getPipelineView()->addPipeline(pipeline);
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -490,17 +494,20 @@ void SIMPLViewApplication::listenNewInstanceTriggered()
 // -----------------------------------------------------------------------------
 void SIMPLViewApplication::listenOpenPipelineTriggered()
 {
-  QString proposedDir = m_OpenDialogLastFilePath;
-  QString filePath = QFileDialog::getOpenFileName(nullptr, tr("Open Pipeline"), proposedDir, tr("Json File (*.json);;DREAM3D File (*.dream3d);;All Files (*.*)"));
-  if(filePath.isEmpty())
+  if (m_ActiveWindow)
   {
-    return;
+    QString proposedDir = m_OpenDialogLastFilePath;
+    QString filePath = QFileDialog::getOpenFileName(nullptr, tr("Open Pipeline"), proposedDir, tr("Json File (*.json);;DREAM3D File (*.dream3d);;All Files (*.*)"));
+    if(filePath.isEmpty())
+    {
+      return;
+    }
+
+    m_ActiveWindow->openPipeline(filePath);
+
+    // Cache the last directory on old instance
+    m_OpenDialogLastFilePath = filePath;
   }
-
-  newInstanceFromFile(filePath);
-
-  // Cache the last directory on old instance
-  m_OpenDialogLastFilePath = filePath;
 }
 
 // -----------------------------------------------------------------------------
