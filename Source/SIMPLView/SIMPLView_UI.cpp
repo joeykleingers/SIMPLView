@@ -489,9 +489,13 @@ void SIMPLView_UI::writeDockWidgetSettings(QtSSettings* prefs, QDockWidget* dw)
 // -----------------------------------------------------------------------------
 void SIMPLView_UI::setupGui()
 {
-  PipelineView* viewWidget = getPipelineView();
+  setTabPosition(Qt::DockWidgetArea::TopDockWidgetArea, QTabWidget::TabPosition::North);
+  setTabPosition(Qt::DockWidgetArea::RightDockWidgetArea, QTabWidget::TabPosition::North); 
+  setTabPosition(Qt::DockWidgetArea::BottomDockWidgetArea, QTabWidget::TabPosition::North); 
+  setTabPosition(Qt::DockWidgetArea::LeftDockWidgetArea, QTabWidget::TabPosition::North);
 
   // Set the IssuesWidget as a PipelineMessageObserver Object.
+  PipelineView* viewWidget = getPipelineView();
   viewWidget->addPipelineMessageObserver(m_Ui->issuesWidget);
   viewWidget->addPipelineMessageObserver(this);
 

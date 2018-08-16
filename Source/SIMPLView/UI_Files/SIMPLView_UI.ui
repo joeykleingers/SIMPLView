@@ -19,9 +19,6 @@
   <property name="windowTitle">
    <string>ActiveDocument.txt</string>
   </property>
-  <property name="styleSheet">
-   <string notr="true"/>
-  </property>
   <property name="dockNestingEnabled">
    <bool>true</bool>
   </property>
@@ -498,9 +495,6 @@
    <header location="global">SVPipelineTreeView.h</header>
   </customwidget>
  </customwidgets>
- <resources>
-  <include location="../../../../../SIMPL/Source/SVWidgetsLib/icons/images/Icons.qrc"/>
-  <include location="../../../../SIMPL/Source/SVWidgetsLib/icons/images/Icons.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>
