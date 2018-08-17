@@ -481,12 +481,15 @@ void SIMPLViewApplication::updateRecentFileList(const QString& file)
 // -----------------------------------------------------------------------------
 void SIMPLViewApplication::listenNewInstanceTriggered()
 {
-  if (m_ActiveWindow)
+  if (!m_ActiveWindow)
   {
-    FilterPipeline::Pointer pipeline = FilterPipeline::New();
-    pipeline->setName("Untitled");
-    m_ActiveWindow->getPipelineView()->addPipeline(pipeline);
+    m_ActiveWindow = getNewSIMPLViewInstance();
+    m_ActiveWindow->show();
   }
+
+  FilterPipeline::Pointer pipeline = FilterPipeline::New();
+  pipeline->setName("Untitled");
+  m_ActiveWindow->addPipeline(pipeline);
 }
 
 // -----------------------------------------------------------------------------

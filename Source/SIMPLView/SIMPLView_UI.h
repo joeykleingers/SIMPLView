@@ -94,6 +94,13 @@ class SIMPLView_UI : public QMainWindow
     virtual ~SIMPLView_UI();
 
     /**
+     * @brief addPipeline
+     * @param pipeline
+     * @param insertIndex
+     */
+    void addPipeline(FilterPipeline::Pointer pipeline, int insertIndex = -1);
+
+    /**
      * @brief eventFilter
      * @param watched
      * @param event
@@ -383,7 +390,7 @@ class SIMPLView_UI : public QMainWindow
      * @brief getPipelineView
      * @return
      */
-    SVPipelineTreeView* getPipelineView();
+    SVPipelineTreeView *getPipelineView();
 
     SIMPLView_UI(const SIMPLView_UI&);    // Copy Constructor Not Implemented
     void operator=(const SIMPLView_UI&);  // Move assignment Not Implemented

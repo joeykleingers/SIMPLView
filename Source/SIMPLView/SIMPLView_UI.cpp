@@ -182,6 +182,18 @@ void SIMPLView_UI::resizeEvent(QResizeEvent* event)
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
+void SIMPLView_UI::addPipeline(FilterPipeline::Pointer pipeline, int insertIndex)
+{
+  PipelineView* pipelineView = getPipelineView();
+  if(pipelineView)
+  {
+    pipelineView->addPipeline(pipeline, insertIndex);
+  }
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
 void SIMPLView_UI::listenSavePipelineTriggered()
 {
   savePipeline();
@@ -326,11 +338,12 @@ void SIMPLView_UI::activateBookmark(const QString& filePath, bool execute)
 // -----------------------------------------------------------------------------
 void SIMPLView_UI::closeEvent(QCloseEvent* event)
 {
-  if(getPipelineView()->isPipelineCurrentlyRunning() == true)
+  PipelineView* pipelineView = getPipelineView();
+  if(pipelineView && pipelineView->arePipelinesRunning() == true)
   {
     QMessageBox runningPipelineBox;
-    runningPipelineBox.setWindowTitle("Pipeline is Running");
-    runningPipelineBox.setText("There is a pipeline currently running.\nPlease cancel the running pipeline and try again.");
+    runningPipelineBox.setWindowTitle("Pipelines Are Running");
+    runningPipelineBox.setText("There are pipelines currently running.\nPlease cancel the running pipelines and try again.");
     runningPipelineBox.setStandardButtons(QMessageBox::Ok);
     runningPipelineBox.setIcon(QMessageBox::Warning);
     runningPipelineBox.exec();
@@ -745,12 +758,12 @@ void SIMPLView_UI::connectSignalsSlots()
 
   /* Filter Library Widget Connections */
   connect(m_Ui->filterLibraryWidget, &FilterLibraryToolboxWidget::filterItemDoubleClicked, [=] (const QString &filterName, int insertIndex) {
-    pipelineView->addFilterFromClassName(filterName, insertIndex);
+    pipelineView->addFilterFromClassName(filterName, pipelineModel->getActivePipeline(), insertIndex);
   });
 
   /* Filter List Widget Connections */
   connect(m_Ui->filterListWidget, &FilterListToolboxWidget::filterItemDoubleClicked, [=] (const QString &filterName, int insertIndex) {
-    pipelineView->addFilterFromClassName(filterName, insertIndex);
+    pipelineView->addFilterFromClassName(filterName, pipelineModel->getActivePipeline(), insertIndex);
   });
 
 //  connect(m_Ui->pipelineListWidget, &PipelineListWidget::pipelineCanceled, [=] {
