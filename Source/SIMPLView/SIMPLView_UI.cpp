@@ -114,7 +114,6 @@ SIMPLView_UI::SIMPLView_UI(QWidget* parent)
 , m_Ui(new Ui::SIMPLView_UI)
 , m_FilterManager(nullptr)
 , m_FilterWidgetManager(nullptr)
-, m_LastOpenedFilePath(QDir::homePath())
 {
   // Register all of the Filters we know about - the rest will be loaded through plugins
   //  which all should have been loaded by now.
@@ -146,9 +145,6 @@ SIMPLView_UI::SIMPLView_UI(QWidget* parent)
   {
     m_Ui->stdOutDockWidget->setHidden(true);
   }
-
-  // Set window modified to false
-  setWindowModified(false);
 }
 
 // -----------------------------------------------------------------------------
@@ -204,34 +200,8 @@ void SIMPLView_UI::listenSavePipelineTriggered()
 // -----------------------------------------------------------------------------
 bool SIMPLView_UI::savePipeline()
 {
-  QString filePath;
-  if(windowFilePath().isEmpty())
-  {
-    // When the file hasn't been saved before, the same functionality as a "Save As" occurs...
-    return savePipelineAs();
-  }
-  else
-  {
-    filePath = windowFilePath();
-  }
-
-  // Fix the separators
-  filePath = QDir::toNativeSeparators(filePath);
-
-  // Write the pipeline
-  PipelineView* viewWidget = getPipelineView();
-  viewWidget->writePipeline(QModelIndex(), filePath);
-
-  // Set window title and save flag
-  QFileInfo prefFileInfo = QFileInfo(filePath);
-  setWindowTitle("[*]" + prefFileInfo.baseName() + " - " + BrandedStrings::ApplicationName);
-  setWindowModified(false);
-
-  // Add file to the recent files list
-  QtSRecentFileList* list = QtSRecentFileList::Instance();
-  list->addFile(filePath);
-
-  return true;
+  SVPipelineTreeView* pipelineView = getPipelineView();
+  return pipelineView->savePipeline();
 }
 
 // -----------------------------------------------------------------------------
@@ -247,61 +217,8 @@ void SIMPLView_UI::listenSavePipelineAsTriggered()
 // -----------------------------------------------------------------------------
 bool SIMPLView_UI::savePipelineAs()
 {
-  QString proposedFile = m_LastOpenedFilePath + QDir::separator() + "Untitled.json";
-  QString filePath = QFileDialog::getSaveFileName(this, tr("Save Pipeline To File"), proposedFile, tr("Json File (*.json);;SIMPLView File (*.dream3d);;All Files (*.*)"));
-  if(true == filePath.isEmpty())
-  {
-    return false;
-  }
-
-  filePath = QDir::toNativeSeparators(filePath);
-
-  // If the filePath already exists - delete it so that we get a clean write to the file
-  QFileInfo fi(filePath);
-  if(fi.suffix().isEmpty())
-  {
-    filePath.append(".json");
-    fi.setFile(filePath);
-  }
-
-  // Write the pipeline
-  PipelineView* viewWidget = getPipelineView();
-  int err = viewWidget->writePipeline(QModelIndex(), filePath);
-
-  if(err >= 0)
-  {
-    // Set window title and save flag
-    setWindowTitle("[*]" + fi.baseName() + " - " + BrandedStrings::ApplicationName);
-    setWindowModified(false);
-
-    // Add file to the recent files list
-    QtSRecentFileList* list = QtSRecentFileList::Instance();
-    list->addFile(filePath);
-
-    setWindowFilePath(filePath);
-  }
-  else
-  {
-    return false;
-  }
-
-  // Cache the last directory
-  m_LastOpenedFilePath = filePath;
-
-  QMessageBox bookmarkMsgBox(this);
-  bookmarkMsgBox.setWindowTitle("Pipeline Saved");
-  bookmarkMsgBox.setText("The pipeline has been saved.");
-  bookmarkMsgBox.setInformativeText("Would you also like to bookmark this pipeline?");
-  bookmarkMsgBox.setStandardButtons(QMessageBox::No | QMessageBox::Yes);
-  bookmarkMsgBox.setDefaultButton(QMessageBox::Yes);
-  int ret = bookmarkMsgBox.exec();
-
-  if(ret == QMessageBox::Yes)
-  {
-    m_Ui->bookmarksWidget->getBookmarksTreeView()->addBookmark(filePath, QModelIndex());
-  }
-
-  return true;
+  SVPipelineTreeView* pipelineView = getPipelineView();
+  return pipelineView->savePipelineAs();
 }
 
 // -----------------------------------------------------------------------------
@@ -783,12 +700,15 @@ void SIMPLView_UI::connectSignalsSlots()
   connect(pipelineModel, &PipelineModel::filterParametersChanged, m_Ui->dataBrowserWidget, &DataStructureWidget::filterActivated);
   connect(pipelineModel, &PipelineModel::statusMessage, [=](const QString& msg) { statusBar()->showMessage(msg); });
   connect(pipelineModel, &PipelineModel::stdOutMessage, [=](const QString& msg) { addStdOutputMessage(msg); });
+  connect(pipelineModel, &PipelineModel::clearIssuesTriggered, m_Ui->issuesWidget, &IssuesWidget::clearIssues);
 
   connect(pipelineView->getPipelineViewController(), &PipelineViewController::clearIssuesTriggered, m_Ui->issuesWidget, &IssuesWidget::clearIssues);
 
   connect(pipelineView->getPipelineViewController(), &PipelineViewController::statusMessage, [=](const QString& msg) { statusBar()->showMessage(msg); });
   connect(pipelineView->getPipelineViewController(), &PipelineViewController::stdOutMessage, [=](const QString& msg) { addStdOutputMessage(msg); });
   connect(pipelineView->getPipelineViewController(), &PipelineViewController::errorMessage, [=](const QString& msg) { addStdOutputMessage(msg, QColor(255, 191, 193)); });
+
+  connect(pipelineView->getPipelineViewController(), &PipelineViewController::pipelineSavedAs, this, &SIMPLView_UI::handlePipelineSaved);
 
   connect(pipelineView->getPipelineViewController(), &PipelineViewController::pipelineChanged, this, &SIMPLView_UI::handlePipelineChanges);
 
@@ -832,14 +752,7 @@ void SIMPLView_UI::showDockWidget(QDockWidget* dockWidget)
 bool SIMPLView_UI::openPipeline(const QString& filePath)
 {
   PipelineView* pipelineView = getPipelineView();
-  bool success = pipelineView->openPipeline(filePath);
-
-  QFileInfo fi(filePath);
-  setWindowTitle(QString("[*]") + fi.baseName() + " - " + QApplication::applicationName());
-  setWindowFilePath(filePath);
-  setWindowModified(false);
-
-  return success;
+  return pipelineView->openPipeline(filePath);
 }
 
 // -----------------------------------------------------------------------------
@@ -870,6 +783,27 @@ void SIMPLView_UI::handlePipelineChanges(FilterPipeline::Pointer pipeline)
   }
 
   pipeline->preflightPipeline();
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void SIMPLView_UI::handlePipelineSaved(const QModelIndex &pipelineRootIndex, const QString &filePath)
+{
+  Q_UNUSED(pipelineRootIndex)
+
+  QMessageBox bookmarkMsgBox(this);
+  bookmarkMsgBox.setWindowTitle("Pipeline Saved");
+  bookmarkMsgBox.setText("The pipeline has been saved.");
+  bookmarkMsgBox.setInformativeText("Would you also like to bookmark this pipeline?");
+  bookmarkMsgBox.setStandardButtons(QMessageBox::No | QMessageBox::Yes);
+  bookmarkMsgBox.setDefaultButton(QMessageBox::Yes);
+  int ret = bookmarkMsgBox.exec();
+
+  if(ret == QMessageBox::Yes)
+  {
+    m_Ui->bookmarksWidget->getBookmarksTreeView()->addBookmark(filePath, QModelIndex());
+  }
 }
 
 // -----------------------------------------------------------------------------

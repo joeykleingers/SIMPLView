@@ -270,6 +270,13 @@ class SIMPLView_UI : public QMainWindow
     void readVersionCheckSettings();
 
     /**
+     * @brief handlePipelineSaved
+     * @param pipelineRootIndex
+     * @param filePath
+     */
+    void handlePipelineSaved(const QModelIndex &pipelineRootIndex, const QString &filePath);
+
+    /**
      * @brief handlePipelineChanges
      */
     void handlePipelineChanges(FilterPipeline::Pointer pipeline);
@@ -324,8 +331,6 @@ class SIMPLView_UI : public QMainWindow
     FilterWidgetManager*                    m_FilterWidgetManager = nullptr;
 
 //    StatusBarWidget*                        m_StatusBar = nullptr;
-
-    QString                                 m_LastOpenedFilePath;
 
     FilterInputWidget*                      m_FilterInputWidget = nullptr;
 
