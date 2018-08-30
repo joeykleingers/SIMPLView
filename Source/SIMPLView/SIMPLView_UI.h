@@ -75,6 +75,7 @@ class PipelineModel;
 class PipelineListWidget;
 class SVPipelineTreeView;
 class SIMPLViewMenuItems;
+class PipelineView;
 
 /**
 * @class SIMPLView_UI SIMPLView_UI Applications/SIMPLView/SIMPLView_UI.h
@@ -142,6 +143,18 @@ class SIMPLView_UI : public QMainWindow
      * @brief showDockWidget
      */
     void showDockWidget(QDockWidget* dockWidget);
+
+    /**
+     * @brief getPipelineView
+     * @return
+     */
+    PipelineView* getPipelineView();
+
+    /**
+     * @brief getAbstractPipelineView
+     * @return
+     */
+    QAbstractItemView* getAbstractPipelineView();
 
   public slots:
     /**
@@ -330,6 +343,8 @@ class SIMPLView_UI : public QMainWindow
   private:
     QSharedPointer<Ui::SIMPLView_UI>        m_Ui;
     QMenuBar*                               m_SIMPLViewMenu = nullptr;
+    PipelineView*                           m_PipelineView = nullptr;
+    QAbstractItemView*                      m_AbstractPipelineView = nullptr;
 
     QVector<ISIMPLibPlugin*>                m_LoadedPlugins;
 
@@ -369,6 +384,16 @@ class SIMPLView_UI : public QMainWindow
     QActionGroup*                           m_ThemeActionGroup = nullptr;
 
     /**
+     * @brief setupPipelineListView
+     */
+    void setupPipelineListView();
+
+    /**
+     * @brief setupPipelineTreeView
+     */
+    void setupPipelineTreeView();
+
+    /**
      * @brief createSIMPLViewMenu
      */
     void createSIMPLViewMenuSystem();
@@ -390,18 +415,6 @@ class SIMPLView_UI : public QMainWindow
      * @return
      */
     bool savePipelineAs();
-
-    /**
-     * @brief getPipelineModel
-     * @return
-     */
-    PipelineModel* getPipelineModel();
-
-    /**
-     * @brief getPipelineView
-     * @return
-     */
-    SVPipelineTreeView *getPipelineView();
 
     SIMPLView_UI(const SIMPLView_UI&);    // Copy Constructor Not Implemented
     void operator=(const SIMPLView_UI&);  // Move assignment Not Implemented

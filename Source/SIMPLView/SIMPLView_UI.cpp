@@ -200,7 +200,7 @@ void SIMPLView_UI::listenSavePipelineTriggered()
 // -----------------------------------------------------------------------------
 bool SIMPLView_UI::savePipeline()
 {
-  SVPipelineTreeView* pipelineView = getPipelineView();
+  PipelineView* pipelineView = getPipelineView();
   return pipelineView->savePipeline();
 }
 
@@ -217,7 +217,7 @@ void SIMPLView_UI::listenSavePipelineAsTriggered()
 // -----------------------------------------------------------------------------
 bool SIMPLView_UI::savePipelineAs()
 {
-  SVPipelineTreeView* pipelineView = getPipelineView();
+  PipelineView* pipelineView = getPipelineView();
   return pipelineView->savePipelineAs();
 }
 
@@ -227,14 +227,14 @@ bool SIMPLView_UI::savePipelineAs()
 void SIMPLView_UI::activateBookmark(const QString& filePath, bool execute)
 {
   SIMPLView_UI* instance = dream3dApp->getActiveInstance();
-//  if(instance != nullptr && instance->isWindowModified() == false && instance->getPipelineModel()->isEmpty())
-//  {
-//    instance->openPipeline(filePath);
-//  }
-//  else
-//  {
-//    instance = dream3dApp->newInstanceFromFile(filePath);
-//  }
+
+  PipelineView* pipelineView = instance->getPipelineView();
+  PipelineModel* pipelineModel = pipelineView->getPipelineModel();
+  if (pipelineModel && pipelineModel->rowCount() == pipelineModel->getMaxPipelineCount())
+  {
+    instance = dream3dApp->getNewSIMPLViewInstance();
+    instance->show();
+  }
 
   instance->openPipeline(filePath);
 
@@ -424,13 +424,19 @@ void SIMPLView_UI::setupGui()
   setTabPosition(Qt::DockWidgetArea::BottomDockWidgetArea, QTabWidget::TabPosition::North); 
   setTabPosition(Qt::DockWidgetArea::LeftDockWidgetArea, QTabWidget::TabPosition::North);
 
-  // Set the IssuesWidget as a PipelineMessageObserver Object.
-  PipelineView* viewWidget = getPipelineView();
-  viewWidget->addPipelineMessageObserver(m_Ui->issuesWidget);
-  viewWidget->addPipelineMessageObserver(this);
+#ifdef SIMPLView_USE_TREEVIEW
+  setupPipelineTreeView();
+#else
+  setupPipelineListView();
+#endif
 
-  QAbstractItemView* abstractItemView = getPipelineView();
-  abstractItemView->installEventFilter(this);
+  // Set the IssuesWidget as a PipelineMessageObserver Object.
+  PipelineView* pipelineView = getPipelineView();
+  pipelineView->addPipelineMessageObserver(m_Ui->issuesWidget);
+  pipelineView->addPipelineMessageObserver(this);
+
+  QAbstractItemView* abstractPipelineView = getAbstractPipelineView();
+  abstractPipelineView->installEventFilter(this);
 
   createSIMPLViewMenuSystem();
 
@@ -490,12 +496,64 @@ void SIMPLView_UI::setupGui()
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
+void SIMPLView_UI::setupPipelineListView()
+{
+  PipelineListWidget* pipelineListWidget = new PipelineListWidget(m_Ui->pipelineInteralWidget);
+  pipelineListWidget->setObjectName(QStringLiteral("pipelineListWidget"));
+  m_Ui->gridLayout_3->addWidget(pipelineListWidget, 0, 0, 1, 1);
+  setWindowTitle(tr("[*]%1 - %2").arg("Untitled").arg(BrandedStrings::ApplicationName));
+
+  m_PipelineView = dynamic_cast<PipelineView*>(pipelineListWidget->getPipelineView());
+  m_AbstractPipelineView = dynamic_cast<QAbstractItemView*>(pipelineListWidget->getPipelineView());
+
+  connect(m_PipelineView->getPipelineModel(), &PipelineModel::pipelineAdded, [=](FilterPipeline::Pointer pipeline, const QModelIndex &pipelineRootIndex) {
+    Q_UNUSED(pipelineRootIndex)
+    setWindowTitle(tr("[*]%1 - %2").arg(pipeline->getName()).arg(BrandedStrings::ApplicationName));
+  });
+
+  connect(m_PipelineView->getPipelineModel(), &PipelineModel::pipelineSaved, [=](FilterPipeline::Pointer pipeline, const QModelIndex &pipelineRootIndex) {
+    Q_UNUSED(pipelineRootIndex)
+    setWindowTitle(tr("[*]%1 - %2").arg(pipeline->getName()).arg(BrandedStrings::ApplicationName));
+    setWindowModified(false);
+  });
+
+  connect(m_PipelineView->getPipelineModel(), &PipelineModel::pipelineModified, [=](FilterPipeline::Pointer pipeline, const QModelIndex &pipelineRootIndex, bool modified) {
+    Q_UNUSED(pipeline)
+    Q_UNUSED(pipelineRootIndex)
+    setWindowModified(modified);
+  });
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void SIMPLView_UI::setupPipelineTreeView()
+{
+  SVPipelineTreeView* pipelineTreeView = new SVPipelineTreeView(m_Ui->pipelineInteralWidget);
+  pipelineTreeView->setObjectName(QStringLiteral("pipelineTreeView"));
+  pipelineTreeView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+  pipelineTreeView->setDragEnabled(true);
+  pipelineTreeView->setDragDropMode(QAbstractItemView::DragDrop);
+  pipelineTreeView->setDefaultDropAction(Qt::MoveAction);
+  pipelineTreeView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+  pipelineTreeView->setAnimated(true);
+  pipelineTreeView->header()->setVisible(false);
+  m_Ui->gridLayout_3->addWidget(pipelineTreeView, 0, 0, 1, 1);
+
+  m_PipelineView = dynamic_cast<PipelineView*>(pipelineTreeView);
+  m_AbstractPipelineView = dynamic_cast<QAbstractItemView*>(pipelineTreeView);
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
 bool SIMPLView_UI::eventFilter(QObject* watched, QEvent* event)
 {
-  if (watched == getPipelineView() && event->type() == QEvent::KeyPress)
+  if (watched == getAbstractPipelineView() && event->type() == QEvent::KeyPress)
   {
-    QAbstractItemView* abstractItemView = getPipelineView();
+    QAbstractItemView* abstractItemView = getAbstractPipelineView();
     PipelineView* pipelineView = getPipelineView();
+    PipelineModel* pipelineModel = pipelineView->getPipelineModel();
 
     QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
     if(keyEvent->key() == Qt::Key_Backspace || keyEvent->key() == Qt::Key_Delete)
@@ -507,7 +565,6 @@ bool SIMPLView_UI::eventFilter(QObject* watched, QEvent* event)
       }
 
       std::vector<AbstractFilter::Pointer> filters;
-      PipelineModel* pipelineModel = getPipelineModel();
       for (int i = 0; i < selectedIndexes.size(); i++)
       {
         QModelIndex selectedIndex = selectedIndexes[i];
@@ -715,14 +772,14 @@ void SIMPLView_UI::createSIMPLViewMenuSystem()
 // -----------------------------------------------------------------------------
 void SIMPLView_UI::connectSignalsSlots()
 {
-  QAbstractItemView* abstractItemView = getPipelineView();
+  QAbstractItemView* abstractItemView = getAbstractPipelineView();
   PipelineView* pipelineView = getPipelineView();
   PipelineModel* pipelineModel = pipelineView->getPipelineModel();
 
   /* Documentation Requester connections */
   DocRequestManager* docRequester = DocRequestManager::Instance();
 
-  connect(this, &QAbstractItemView::customContextMenuRequested, this, &SIMPLView_UI::requestContextMenu);
+  connect(abstractItemView, &QAbstractItemView::customContextMenuRequested, this, &SIMPLView_UI::requestContextMenu);
 
   connect(docRequester, SIGNAL(showFilterDocs(const QString&)), this, SLOT(showFilterHelp(const QString&)));
   connect(docRequester, SIGNAL(showFilterDocUrl(const QUrl&)), this, SLOT(showFilterHelpUrl(const QUrl&)));
@@ -795,18 +852,14 @@ void SIMPLView_UI::requestContextMenu(const QPoint& pos)
   activateWindow();
 
   PipelineView* pipelineView = getPipelineView();
-  QAbstractItemView* abstractItemView = getPipelineView();
+  QAbstractItemView* abstractItemView = getAbstractPipelineView();
+  PipelineModel* pipelineModel = pipelineView->getPipelineModel();
 
   QModelIndex index = abstractItemView->indexAt(pos);
-  PipelineModel* model = getPipelineModel();
   QPoint mapped;
 
-  PipelineItem::ItemType itemType = static_cast<PipelineItem::ItemType>(model->data(index, PipelineModel::ItemTypeRole).toInt());
-  if(itemType == PipelineItem::ItemType::Filter)
-  {
-    mapped = abstractItemView->viewport()->mapToGlobal(pos);
-  }
-  else if(itemType == PipelineItem::ItemType::PipelineRoot)
+  PipelineItem::ItemType itemType = static_cast<PipelineItem::ItemType>(pipelineModel->data(index, PipelineModel::ItemTypeRole).toInt());
+  if(itemType == PipelineItem::ItemType::Filter || itemType == PipelineItem::ItemType::PipelineRoot)
   {
     mapped = abstractItemView->viewport()->mapToGlobal(pos);
   }
@@ -820,7 +873,11 @@ void SIMPLView_UI::requestContextMenu(const QPoint& pos)
   if(viewController)
   {
     QMenu menu;
-    if(itemType == PipelineItem::ItemType::Filter)
+    if (index.isValid() == false)
+    {
+      viewController->getDefaultContextMenu(menu);
+    }
+    else if(itemType == PipelineItem::ItemType::Filter)
     {
       viewController->getFilterItemContextMenu(menu, index);
     }
@@ -864,7 +921,7 @@ bool SIMPLView_UI::openPipeline(const QString& filePath)
 // -----------------------------------------------------------------------------
 void SIMPLView_UI::handlePipelineChanges(FilterPipeline::Pointer pipeline)
 {
-  QAbstractItemView* abstractItemView = getPipelineView();
+  QAbstractItemView* abstractItemView = getAbstractPipelineView();
 
   QModelIndexList selectedIndexes = abstractItemView->selectionModel()->selectedRows();
   qSort(selectedIndexes);
@@ -876,9 +933,10 @@ void SIMPLView_UI::handlePipelineChanges(FilterPipeline::Pointer pipeline)
   else
   {
     QModelIndex selectedIndex = selectedIndexes[0];
-    PipelineModel* model = getPipelineModel();
+    PipelineView* pipelineView = getPipelineView();
+    PipelineModel* pipelineModel = pipelineView->getPipelineModel();
 
-    AbstractFilter::Pointer filter = model->filter(selectedIndex);
+    AbstractFilter::Pointer filter = pipelineModel->filter(selectedIndex);
 
     if (pipeline->getFilterContainer().contains(filter))
     {
@@ -1054,9 +1112,17 @@ DataStructureWidget* SIMPLView_UI::getDataStructureWidget()
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-SVPipelineTreeView* SIMPLView_UI::getPipelineView()
+PipelineView* SIMPLView_UI::getPipelineView()
 {
-  return m_Ui->pipelineTreeView;
+  return m_PipelineView;
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+QAbstractItemView* SIMPLView_UI::getAbstractPipelineView()
+{
+  return m_AbstractPipelineView;
 }
 
 // -----------------------------------------------------------------------------
@@ -1065,7 +1131,8 @@ SVPipelineTreeView* SIMPLView_UI::getPipelineView()
 void SIMPLView_UI::filterSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
 {
   PipelineView* pipelineView = getPipelineView();
-  QAbstractItemView* abstractView = getPipelineView();
+  QAbstractItemView* abstractView = getAbstractPipelineView();
+  PipelineModel* pipelineModel = pipelineView->getPipelineModel();
 
   QModelIndexList selectedIndexes = abstractView->selectionModel()->selectedRows();
   qSort(selectedIndexes);
@@ -1074,11 +1141,10 @@ void SIMPLView_UI::filterSelectionChanged(const QItemSelection& selected, const 
   {
     QModelIndex selectedIndex = selectedIndexes[0];
 
-    PipelineModel* model = getPipelineModel();
-    FilterInputWidget* fiw = model->filterInputWidget(selectedIndex);
+    FilterInputWidget* fiw = pipelineModel->filterInputWidget(selectedIndex);
     setFilterInputWidget(fiw);
 
-    AbstractFilter::Pointer filter = model->filter(selectedIndex);
+    AbstractFilter::Pointer filter = pipelineModel->filter(selectedIndex);
     m_Ui->dataBrowserWidget->filterActivated(filter);
   }
   else
@@ -1089,7 +1155,6 @@ void SIMPLView_UI::filterSelectionChanged(const QItemSelection& selected, const 
 
   pipelineView->getPipelineViewController()->setCutCopyEnabled(abstractView->selectionModel()->selectedRows().size() > 0);
 
-  PipelineModel* pipelineModel = getPipelineModel();
   QModelIndex index = abstractView->currentIndex();
   PipelineItem::ItemType itemType = static_cast<PipelineItem::ItemType>(pipelineModel->data(index, PipelineModel::ItemTypeRole).toInt());
   if(itemType == PipelineItem::ItemType::PipelineRoot && index != pipelineModel->getActivePipeline())
@@ -1220,13 +1285,4 @@ void SIMPLView_UI::changeEvent(QEvent* event)
   {
     emit dream3dWindowChangedState(this);
   }
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-PipelineModel* SIMPLView_UI::getPipelineModel()
-{
-  PipelineView* pipelineView = getPipelineView();
-  return pipelineView->getPipelineModel();
 }

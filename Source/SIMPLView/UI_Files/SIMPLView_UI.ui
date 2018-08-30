@@ -153,31 +153,6 @@
      <property name="bottomMargin">
       <number>0</number>
      </property>
-     <item row="0" column="0">
-      <widget class="SVPipelineTreeView" name="pipelineTreeView">
-       <property name="editTriggers">
-        <set>QAbstractItemView::NoEditTriggers</set>
-       </property>
-       <property name="dragEnabled">
-        <bool>true</bool>
-       </property>
-       <property name="dragDropMode">
-        <enum>QAbstractItemView::DragDrop</enum>
-       </property>
-       <property name="defaultDropAction">
-        <enum>Qt::MoveAction</enum>
-       </property>
-       <property name="selectionMode">
-        <enum>QAbstractItemView::ExtendedSelection</enum>
-       </property>
-       <property name="animated">
-        <bool>true</bool>
-       </property>
-       <attribute name="headerVisible">
-        <bool>false</bool>
-       </attribute>
-      </widget>
-     </item>
     </layout>
    </widget>
   </widget>
@@ -503,11 +478,6 @@
    <extends>QWidget</extends>
    <header location="global">FilterListToolboxWidget.h</header>
    <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>SVPipelineTreeView</class>
-   <extends>QTreeView</extends>
-   <header location="global">SVPipelineTreeView.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

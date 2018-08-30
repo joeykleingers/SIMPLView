@@ -143,6 +143,9 @@ set_property(GLOBAL PROPERTY SIMPLView_BUILD_DOCUMENTATION "${SIMPLView_BUILD_DO
 option(SIMPLView_USE_STYLESHEETEDITOR "Use the style sheet editor to apply custom styles" OFF)
 set_property(GLOBAL PROPERTY SIMPLView_USE_STYLESHEETEDITOR "${SIMPLView_USE_STYLESHEETEDITOR}")
 
+option(SIMPLView_USE_TREEVIEW "Use the pipeline tree view" OFF)
+set_property(GLOBAL PROPERTY SIMPLView_USE_TREEVIEW "${SIMPLView_USE_TREEVIEW}")
+
 # -----------------------------------------------------------------------
 # Setup a Global property that is used to gather Documentation Information
 # into a single known location

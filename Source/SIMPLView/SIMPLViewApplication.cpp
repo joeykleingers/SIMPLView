@@ -77,6 +77,7 @@
 #include "SVWidgetsLib/Dialogs/UpdateCheckDialog.h"
 #include "SVWidgetsLib/Widgets/BookmarksToolboxWidget.h"
 #include "SVWidgetsLib/Widgets/PipelineModel.h"
+#include "SVWidgetsLib/Widgets/PipelineView.h"
 #include "SVWidgetsLib/Widgets/SVStyle.h"
 
 #include "SIMPLView/AboutSIMPLView.h"
@@ -493,10 +494,22 @@ void SIMPLViewApplication::listenNewInstanceTriggered()
     m_ActiveWindow = getNewSIMPLViewInstance();
     m_ActiveWindow->show();
   }
-
-  FilterPipeline::Pointer pipeline = FilterPipeline::New();
-  pipeline->setName("Untitled");
-  m_ActiveWindow->addPipeline(pipeline);
+  else
+  {
+    PipelineView* pipelineView = m_ActiveWindow->getPipelineView();
+    PipelineModel* pipelineModel = pipelineView->getPipelineModel();
+    if (pipelineModel && pipelineModel->rowCount() == pipelineModel->getMaxPipelineCount())
+    {
+      m_ActiveWindow = getNewSIMPLViewInstance();
+      m_ActiveWindow->show();
+    }
+    else
+    {
+      FilterPipeline::Pointer pipeline = FilterPipeline::New();
+      pipeline->setName("Untitled");
+      m_ActiveWindow->addPipeline(pipeline);
+    }
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -515,6 +528,16 @@ void SIMPLViewApplication::listenOpenPipelineTriggered()
   {
     m_ActiveWindow = getNewSIMPLViewInstance();
     m_ActiveWindow->show();
+  }
+  else
+  {
+    PipelineView* pipelineView = m_ActiveWindow->getPipelineView();
+    PipelineModel* pipelineModel = pipelineView->getPipelineModel();
+    if (pipelineModel && pipelineModel->rowCount() == pipelineModel->getMaxPipelineCount())
+    {
+      m_ActiveWindow = getNewSIMPLViewInstance();
+      m_ActiveWindow->show();
+    }
   }
 
   m_ActiveWindow->openPipeline(filePath);
@@ -830,7 +853,6 @@ SIMPLView_UI* SIMPLViewApplication::getNewSIMPLViewInstance()
   SIMPLView_UI* newInstance = new SIMPLView_UI(nullptr);
   newInstance->setLoadedPlugins(plugins);
   newInstance->setAttribute(Qt::WA_DeleteOnClose);
-  newInstance->setWindowTitle("[*]Untitled Pipeline - " + BrandedStrings::ApplicationName);
 
   if (m_ActiveWindow)
   {
