@@ -429,6 +429,9 @@ void SIMPLView_UI::setupGui()
   viewWidget->addPipelineMessageObserver(m_Ui->issuesWidget);
   viewWidget->addPipelineMessageObserver(this);
 
+  QAbstractItemView* abstractItemView = getPipelineView();
+  abstractItemView->installEventFilter(this);
+
   createSIMPLViewMenuSystem();
 
   // Hook up the signals from the various docks to the PipelineViewWidget that will either add a filter
@@ -489,7 +492,56 @@ void SIMPLView_UI::setupGui()
 // -----------------------------------------------------------------------------
 bool SIMPLView_UI::eventFilter(QObject* watched, QEvent* event)
 {
-  if(static_cast<QDockWidget*>(watched) != nullptr)
+  if (watched == getPipelineView() && event->type() == QEvent::KeyPress)
+  {
+    QAbstractItemView* abstractItemView = getPipelineView();
+    PipelineView* pipelineView = getPipelineView();
+
+    QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+    if(keyEvent->key() == Qt::Key_Backspace || keyEvent->key() == Qt::Key_Delete)
+    {
+      QModelIndexList selectedIndexes = abstractItemView->selectionModel()->selectedRows();
+      if(selectedIndexes.size() <= 0)
+      {
+        return false;
+      }
+
+      std::vector<AbstractFilter::Pointer> filters;
+      PipelineModel* pipelineModel = getPipelineModel();
+      for (int i = 0; i < selectedIndexes.size(); i++)
+      {
+        QModelIndex selectedIndex = selectedIndexes[i];
+        PipelineItem::ItemType itemType = static_cast<PipelineItem::ItemType>(pipelineModel->data(selectedIndex, PipelineModel::ItemTypeRole).toInt());
+        if(itemType == PipelineItem::ItemType::PipelineRoot)
+        {
+          PipelineItem::PipelineState pipelineState = static_cast<PipelineItem::PipelineState>(pipelineModel->data(selectedIndex, PipelineModel::PipelineStateRole).toInt());
+          if (pipelineState != PipelineItem::PipelineState::Running)
+          {
+            pipelineView->removePipeline(selectedIndex);
+          }
+        }
+        else if (itemType == PipelineItem::ItemType::Filter && selectedIndex.parent().isValid())
+        {
+          PipelineItem::PipelineState pipelineState = static_cast<PipelineItem::PipelineState>(pipelineModel->data(selectedIndex.parent(), PipelineModel::PipelineStateRole).toInt());
+          if (pipelineState != PipelineItem::PipelineState::Running)
+          {
+            AbstractFilter::Pointer filter = pipelineModel->filter(selectedIndex);
+            filters.push_back(filter);
+          }
+        }
+      }
+
+      if(filters.empty() == false)
+      {
+        pipelineView->removeFilters(filters);
+      }
+    }
+    else if(keyEvent->key() == Qt::Key_A && qApp->queryKeyboardModifiers() == Qt::ControlModifier)
+    {
+      abstractItemView->selectAll();
+    }
+  }
+  else if(static_cast<QDockWidget*>(watched) != nullptr)
   {
     // Writes the window settings when dock widgets are resized or when the tabs are rearranged.  ChildRemoved and ChildAdded
     // are the only signals emitted when changing the order of the tabs, and there doesn't seem to be a better way to detect that.
@@ -670,6 +722,8 @@ void SIMPLView_UI::connectSignalsSlots()
   /* Documentation Requester connections */
   DocRequestManager* docRequester = DocRequestManager::Instance();
 
+  connect(this, &QAbstractItemView::customContextMenuRequested, this, &SIMPLView_UI::requestContextMenu);
+
   connect(docRequester, SIGNAL(showFilterDocs(const QString&)), this, SLOT(showFilterHelp(const QString&)));
   connect(docRequester, SIGNAL(showFilterDocUrl(const QUrl&)), this, SLOT(showFilterHelpUrl(const QUrl&)));
 
@@ -731,6 +785,56 @@ void SIMPLView_UI::connectDockWidgetSignalsSlots(QDockWidget* dockWidget)
   connect(dockWidget, &QDockWidget::dockLocationChanged, [=] { writeWindowSettings(); });
   connect(dockWidget, &QDockWidget::topLevelChanged, [=] { writeWindowSettings(); });
   connect(dockWidget, &QDockWidget::visibilityChanged, [=] { writeWindowSettings(); });
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void SIMPLView_UI::requestContextMenu(const QPoint& pos)
+{
+  activateWindow();
+
+  PipelineView* pipelineView = getPipelineView();
+  QAbstractItemView* abstractItemView = getPipelineView();
+
+  QModelIndex index = abstractItemView->indexAt(pos);
+  PipelineModel* model = getPipelineModel();
+  QPoint mapped;
+
+  PipelineItem::ItemType itemType = static_cast<PipelineItem::ItemType>(model->data(index, PipelineModel::ItemTypeRole).toInt());
+  if(itemType == PipelineItem::ItemType::Filter)
+  {
+    mapped = abstractItemView->viewport()->mapToGlobal(pos);
+  }
+  else if(itemType == PipelineItem::ItemType::PipelineRoot)
+  {
+    mapped = abstractItemView->viewport()->mapToGlobal(pos);
+  }
+  else
+  {
+    mapped = mapToGlobal(pos);
+  }
+
+  PipelineViewController* viewController = pipelineView->getPipelineViewController();
+
+  if(viewController)
+  {
+    QMenu menu;
+    if(itemType == PipelineItem::ItemType::Filter)
+    {
+      viewController->getFilterItemContextMenu(menu, index);
+    }
+    else if(itemType == PipelineItem::ItemType::PipelineRoot)
+    {
+      viewController->getPipelineItemContextMenu(menu, index);
+    }
+    else
+    {
+      viewController->getDefaultContextMenu(menu);
+    }
+
+    menu.exec(mapped);
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -961,8 +1065,9 @@ SVPipelineTreeView* SIMPLView_UI::getPipelineView()
 void SIMPLView_UI::filterSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
 {
   PipelineView* pipelineView = getPipelineView();
+  QAbstractItemView* abstractView = getPipelineView();
 
-  QModelIndexList selectedIndexes = pipelineView->getSelectedRows();
+  QModelIndexList selectedIndexes = abstractView->selectionModel()->selectedRows();
   qSort(selectedIndexes);
 
   if(selectedIndexes.size() == 1)
@@ -980,6 +1085,20 @@ void SIMPLView_UI::filterSelectionChanged(const QItemSelection& selected, const 
   {
     clearFilterInputWidget();
     m_Ui->dataBrowserWidget->filterActivated(AbstractFilter::NullPointer());
+  }
+
+  pipelineView->getPipelineViewController()->setCutCopyEnabled(abstractView->selectionModel()->selectedRows().size() > 0);
+
+  PipelineModel* pipelineModel = getPipelineModel();
+  QModelIndex index = abstractView->currentIndex();
+  PipelineItem::ItemType itemType = static_cast<PipelineItem::ItemType>(pipelineModel->data(index, PipelineModel::ItemTypeRole).toInt());
+  if(itemType == PipelineItem::ItemType::PipelineRoot && index != pipelineModel->getActivePipeline())
+  {
+    pipelineModel->updateActivePipeline(index);
+  }
+  else if (index.parent().isValid() && index.parent() != pipelineModel->getActivePipeline())
+  {
+    pipelineModel->updateActivePipeline(index.parent());
   }
 }
 

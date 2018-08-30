@@ -281,6 +281,12 @@ class SIMPLView_UI : public QMainWindow
      */
     void handlePipelineChanges(FilterPipeline::Pointer pipeline);
 
+    /**
+     * @brief requestContextMenu
+     * @param pos
+     */
+    void requestContextMenu(const QPoint& pos);
+
   protected slots:
     /**
      * @brief processPipelineMessage
