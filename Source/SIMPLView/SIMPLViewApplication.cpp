@@ -468,13 +468,22 @@ void SIMPLViewApplication::updateRecentFileList(const QString& file)
     QAction* action = m_MenuRecentFiles->addAction(QtSRecentFileList::Instance()->parentAndFileName(filePath));
 //    action->setVisible(true);
     connect(action, &QAction::triggered, [=] {
-      if (m_ActiveWindow)
+      if (!m_ActiveWindow)
       {
-        m_ActiveWindow->openPipeline(filePath);
+        dream3dApp->newInstanceFromFile(filePath);
       }
       else
       {
-        dream3dApp->newInstanceFromFile(filePath);
+        PipelineView* pipelineView = m_ActiveWindow->getPipelineView();
+        PipelineModel* pipelineModel = pipelineView->getPipelineModel();
+        if (pipelineModel && pipelineModel->rowCount() == pipelineModel->getMaxPipelineCount())
+        {
+          dream3dApp->newInstanceFromFile(filePath);
+        }
+        else
+        {
+          m_ActiveWindow->openPipeline(filePath);
+        }
       }
     });
   }
