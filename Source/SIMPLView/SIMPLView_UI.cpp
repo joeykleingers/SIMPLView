@@ -829,9 +829,9 @@ void SIMPLView_UI::connectSignalsSlots()
     m_Ui->issuesWidget->displayCachedMessages();
   });
 
-//  connect(pipelineView, &SVPipelineView::filterInputWidgetNeedsCleared, this, &SIMPLView_UI::clearFilterInputWidget);
+//  connect(pipelineView, &SVPipelineListView::filterInputWidgetNeedsCleared, this, &SIMPLView_UI::clearFilterInputWidget);
 
-//  connect(pipelineView, &SVPipelineView::filePathOpened, [=](const QString& filePath) { m_LastOpenedFilePath = filePath; });
+//  connect(pipelineView, &SVPipelineListView::filePathOpened, [=](const QString& filePath) { m_LastOpenedFilePath = filePath; });
 }
 
 // -----------------------------------------------------------------------------

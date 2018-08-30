@@ -52,7 +52,7 @@ class QPluginLoader;
 class ISIMPLibPlugin;
 class SIMPLViewToolbox;
 class SVPipelineFilterWidget;
-class SVPipelineViewWidget;
+class SVPipelineListViewWidget;
 
 /**
  * @brief The SIMPLViewApplication class
