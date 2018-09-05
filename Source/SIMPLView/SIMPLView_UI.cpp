@@ -809,6 +809,8 @@ void SIMPLView_UI::connectSignalsSlots()
   connect(pipelineModel, &PipelineModel::stdOutMessage, [=](const QString& msg) { addStdOutputMessage(msg); });
   connect(pipelineModel, &PipelineModel::clearIssuesTriggered, m_Ui->issuesWidget, &IssuesWidget::clearIssues);
 
+  connect(pipelineModel, &PipelineModel::activePipelineUpdated, this, &SIMPLView_UI::handleActivePipelineUpdated);
+
   connect(pipelineView->getPipelineViewController(), &PipelineViewController::clearIssuesTriggered, m_Ui->issuesWidget, &IssuesWidget::clearIssues);
 
   connect(pipelineView->getPipelineViewController(), &PipelineViewController::statusMessage, [=](const QString& msg) { statusBar()->showMessage(msg); });
@@ -838,6 +840,22 @@ void SIMPLView_UI::connectDockWidgetSignalsSlots(QDockWidget* dockWidget)
   connect(dockWidget, &QDockWidget::dockLocationChanged, [=] { writeWindowSettings(); });
   connect(dockWidget, &QDockWidget::topLevelChanged, [=] { writeWindowSettings(); });
   connect(dockWidget, &QDockWidget::visibilityChanged, [=] { writeWindowSettings(); });
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void SIMPLView_UI::handleActivePipelineUpdated(const QModelIndex &pipelineRootIndex)
+{
+  PipelineView* pipelineView = getPipelineView();
+  if (pipelineView)
+  {
+    PipelineModel* pipelineModel = pipelineView->getPipelineModel();
+    if (pipelineModel)
+    {
+      QTextEdit* stdOutTextEdit = pipelineModel->standardOutputTextEdit(pipelineRootIndex);
+    }
+  }
 }
 
 // -----------------------------------------------------------------------------

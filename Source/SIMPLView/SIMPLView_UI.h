@@ -295,6 +295,12 @@ class SIMPLView_UI : public QMainWindow
     void handlePipelineChanges(FilterPipeline::Pointer pipeline);
 
     /**
+     * @brief handleActivePipelineUpdated
+     * @param pipelineRootIndex
+     */
+    void handleActivePipelineUpdated(const QModelIndex &pipelineRootIndex);
+
+    /**
      * @brief requestContextMenu
      * @param pos
      */
