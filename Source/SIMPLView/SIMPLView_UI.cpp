@@ -794,10 +794,6 @@ void SIMPLView_UI::connectSignalsSlots()
     pipelineView->addFilterFromClassName(filterName, pipelineModel->getActivePipeline(), insertIndex);
   });
 
-//  connect(m_Ui->pipelineListWidget, &PipelineListWidget::pipelineCanceled, [=] {
-//    pipelineView->cancelPipeline();
-//  });
-
   /* Bookmarks Widget Connections */
   connect(m_Ui->bookmarksWidget, &BookmarksToolboxWidget::bookmarkActivated, this, &SIMPLView_UI::activateBookmark);
 
