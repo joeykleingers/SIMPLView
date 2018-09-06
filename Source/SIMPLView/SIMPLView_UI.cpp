@@ -853,7 +853,8 @@ void SIMPLView_UI::handleActivePipelineUpdated(const QModelIndex &pipelineRootIn
     PipelineModel* pipelineModel = pipelineView->getPipelineModel();
     if (pipelineModel)
     {
-      QTextEdit* stdOutTextEdit = pipelineModel->standardOutputTextEdit(pipelineRootIndex);
+      PipelineOutputTextEdit* pipelineOutTE = pipelineModel->pipelineOutputTextEdit(pipelineRootIndex);
+      m_Ui->stdOutWidget->setPipelineOutputTextEdit(pipelineOutTE);
     }
   }
 }
@@ -1061,11 +1062,6 @@ void SIMPLView_UI::processPipelineMessage(const PipelineMessage& msg)
     {
       m_Ui->issuesDockWidget->setVisible(true);
     }
-
-    QString text = "<span style=\" color:#000000;\" >";
-    text.append(msg.getText());
-    text.append("</span>");
-    m_Ui->stdOutWidget->appendText(text);
   }
 }
 
@@ -1287,7 +1283,7 @@ void SIMPLView_UI::addStdOutputMessage(const QString& msg, QColor textColor)
   QString text = tr("<span style=\" color:%1;\" >").arg(textColor.name());
   text.append(msg);
   text.append("</span>");
-  m_Ui->stdOutWidget->appendText(text);
+  m_Ui->stdOutWidget->appendStdOutText(text);
 }
 
 // -----------------------------------------------------------------------------
