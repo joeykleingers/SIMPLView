@@ -301,6 +301,27 @@ class SIMPLView_UI : public QMainWindow
     void handleActivePipelineUpdated(const QModelIndex &pipelineRootIndex);
 
     /**
+     * @brief handlePreflightFinished
+     * @param pipeline
+     * @param err
+     */
+    void handlePreflightFinished(FilterPipeline::Pointer pipeline, int err);
+
+    /**
+     * @brief handlePipelineAdded
+     * @param pipeline
+     * @param pipelineRootIndex
+     */
+    void handlePipelineAdded(FilterPipeline::Pointer pipeline, const QModelIndex &pipelineRootIndex);
+
+    /**
+     * @brief handleFiltersAdded
+     * @param filters
+     * @param indices
+     */
+    void handleFiltersAdded(std::vector<AbstractFilter::Pointer> filters, std::vector<size_t> indices, const QModelIndex &pipelineRootIndex);
+
+    /**
      * @brief requestContextMenu
      * @param pos
      */
