@@ -515,7 +515,6 @@ void SIMPLViewApplication::listenNewInstanceTriggered()
     else
     {
       FilterPipeline::Pointer pipeline = FilterPipeline::New();
-      pipeline->setName("Untitled");
       m_ActiveWindow->addPipeline(pipeline);
     }
   }

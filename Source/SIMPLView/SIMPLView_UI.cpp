@@ -275,7 +275,7 @@ void SIMPLView_UI::closeEvent(QCloseEvent* event)
     return;
   }
 
-  m_Ui->stdOutWidget->setPipelineOutputTextEdit(nullptr);
+  m_Ui->stdOutWidget->setPipelineOutputTextEdit(PipelineOutputTextEdit::NullPointer());
 
   event->accept();
 }
@@ -804,6 +804,7 @@ void SIMPLView_UI::connectSignalsSlots()
 
   connect(pipelineModel, &PipelineModel::filtersAdded, this, &SIMPLView_UI::handleFiltersAdded);
   connect(pipelineModel, &PipelineModel::pipelineAdded, this, &SIMPLView_UI::handlePipelineAdded);
+  connect(pipelineModel, &PipelineModel::pipelineRemoved, this, &SIMPLView_UI::handlePipelineRemoved);
 
   connect(pipelineModel, &PipelineModel::filterParametersChanged, m_Ui->dataBrowserWidget, &DataStructureWidget::filterActivated);
   connect(pipelineModel, &PipelineModel::statusMessage, [=](const QString& msg) { statusBar()->showMessage(msg); });
@@ -816,7 +817,7 @@ void SIMPLView_UI::connectSignalsSlots()
 
   connect(pipelineView->getPipelineViewController(), &PipelineViewController::statusMessage, [=](const QString& msg) { statusBar()->showMessage(msg); });
   connect(pipelineView->getPipelineViewController(), &PipelineViewController::stdOutMessage, [=](const QString& msg) { addStdOutputMessage(msg); });
-  connect(pipelineView->getPipelineViewController(), &PipelineViewController::errorMessage, [=](const QString& msg) { addStdOutputMessage(msg, QColor(255, 191, 193)); });
+  connect(pipelineView->getPipelineViewController(), &PipelineViewController::errorMessage, [=](const QString& msg) { addStdOutputMessage(msg, QColor(255, 128, 132)); });
 
   connect(pipelineView->getPipelineViewController(), &PipelineViewController::pipelineSavedAs, this, &SIMPLView_UI::handlePipelineSaved);
 
@@ -862,6 +863,11 @@ void SIMPLView_UI::handlePreflightFinished(FilterPipeline::Pointer pipeline, int
 void SIMPLView_UI::handlePipelineAdded(FilterPipeline::Pointer pipeline, const QModelIndex &pipelineRootIndex)
 {
   PipelineView* pipelineView = getPipelineView();
+  if (pipelineView->hasActivePipeline() == false)
+  {
+    pipelineView->updateActivePipeline(pipelineRootIndex);
+  }
+
   if (pipelineView->getActivePipeline() == pipelineRootIndex)
   {
     m_Ui->issuesWidget->clearIssues();
@@ -870,6 +876,21 @@ void SIMPLView_UI::handlePipelineAdded(FilterPipeline::Pointer pipeline, const Q
     {
       pipelineView->preflightPipeline(pipelineRootIndex);
     }
+  }
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void SIMPLView_UI::handlePipelineRemoved(FilterPipeline::Pointer pipeline, int row)
+{
+  Q_UNUSED(pipeline)
+
+  PipelineView* pipelineView = getPipelineView();
+  QModelIndex activePipelineRootIndex = pipelineView->getActivePipeline();
+  if (activePipelineRootIndex.row() == row)
+  {
+    pipelineView->clearActivePipeline();
   }
 }
 
@@ -900,7 +921,7 @@ void SIMPLView_UI::handleActivePipelineUpdated(const QModelIndex &pipelineRootIn
     PipelineModel* pipelineModel = pipelineView->getPipelineModel();
     if (pipelineModel && pipelineRootIndex.isValid())
     {
-      PipelineOutputTextEdit* pipelineOutTE = pipelineModel->pipelineOutputTextEdit(pipelineRootIndex);
+      PipelineOutputTextEdit::Pointer pipelineOutTE = pipelineModel->pipelineOutputTextEdit(pipelineRootIndex);
       m_Ui->stdOutWidget->setPipelineOutputTextEdit(pipelineOutTE);
 
       QVector<PipelineMessage> pipelineMessages = pipelineModel->pipelineMessages(pipelineRootIndex);
@@ -910,8 +931,6 @@ void SIMPLView_UI::handleActivePipelineUpdated(const QModelIndex &pipelineRootIn
 
   QAbstractItemView* abstractView = getAbstractPipelineView();
   abstractView->viewport()->update();
-
-  qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
 }
 
 // -----------------------------------------------------------------------------
@@ -983,7 +1002,7 @@ void SIMPLView_UI::showDockWidget(QDockWidget* dockWidget)
 bool SIMPLView_UI::openPipeline(const QString& filePath)
 {
   PipelineView* pipelineView = getPipelineView();
-  return pipelineView->openPipeline(filePath);
+  return pipelineView->openPipeline(filePath, QModelIndex());
 }
 
 // -----------------------------------------------------------------------------

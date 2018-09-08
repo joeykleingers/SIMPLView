@@ -315,6 +315,13 @@ class SIMPLView_UI : public QMainWindow
     void handlePipelineAdded(FilterPipeline::Pointer pipeline, const QModelIndex &pipelineRootIndex);
 
     /**
+     * @brief handlePipelineRemoved
+     * @param pipeline
+     * @param row
+     */
+    void handlePipelineRemoved(FilterPipeline::Pointer pipeline, int row);
+
+    /**
      * @brief handleFiltersAdded
      * @param filters
      * @param indices
