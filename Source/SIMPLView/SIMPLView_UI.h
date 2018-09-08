@@ -73,7 +73,7 @@ class AboutSIMPLView;
 class StatusBarWidget;
 class PipelineModel;
 class PipelineListWidget;
-class SVPipelineTreeView;
+class PipelineTreeView;
 class SIMPLViewMenuItems;
 class PipelineView;
 

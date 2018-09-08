@@ -80,7 +80,7 @@
 #include "SVWidgetsLib/Widgets/PipelineViewController.h"
 #include "SVWidgetsLib/Widgets/SVStyle.h"
 #include "SVWidgetsLib/Widgets/StatusBarWidget.h"
-#include "SVWidgetsLib/Widgets/SVPipelineTreeView.h"
+#include "SVWidgetsLib/Widgets/PipelineTreeView.h"
 #ifdef SIMPL_USE_QtWebEngine
 #include "SVWidgetsLib/Widgets/SVUserManualDialog.h"
 #else
@@ -527,7 +527,7 @@ void SIMPLView_UI::setupPipelineListView()
 // -----------------------------------------------------------------------------
 void SIMPLView_UI::setupPipelineTreeView()
 {
-  SVPipelineTreeView* pipelineTreeView = new SVPipelineTreeView(m_Ui->pipelineInteralWidget);
+  PipelineTreeView* pipelineTreeView = new PipelineTreeView(m_Ui->pipelineInteralWidget);
   pipelineTreeView->setObjectName(QStringLiteral("pipelineTreeView"));
   pipelineTreeView->setEditTriggers(QAbstractItemView::NoEditTriggers);
   pipelineTreeView->setDragEnabled(true);
