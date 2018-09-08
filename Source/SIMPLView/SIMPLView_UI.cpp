@@ -528,13 +528,11 @@ void SIMPLView_UI::setupPipelineListView()
 void SIMPLView_UI::setupPipelineTreeView()
 {
   PipelineTreeView* pipelineTreeView = new PipelineTreeView(m_Ui->pipelineInteralWidget);
-  pipelineTreeView->setObjectName(QStringLiteral("pipelineTreeView"));
   pipelineTreeView->setEditTriggers(QAbstractItemView::NoEditTriggers);
   pipelineTreeView->setDragEnabled(true);
   pipelineTreeView->setDragDropMode(QAbstractItemView::DragDrop);
   pipelineTreeView->setDefaultDropAction(Qt::MoveAction);
   pipelineTreeView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-  pipelineTreeView->setAnimated(true);
   pipelineTreeView->header()->setVisible(false);
   m_Ui->gridLayout_3->addWidget(pipelineTreeView, 0, 0, 1, 1);
 
@@ -913,18 +911,20 @@ void SIMPLView_UI::handleFiltersAdded(std::vector<AbstractFilter::Pointer> filte
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void SIMPLView_UI::handleActivePipelineUpdated(const QModelIndex &pipelineRootIndex)
+void SIMPLView_UI::handleActivePipelineUpdated(const QModelIndex &oldPipelineRootIndex, const QModelIndex &newPipelineRootIndex)
 {
+  Q_UNUSED(oldPipelineRootIndex)
+
   PipelineView* pipelineView = getPipelineView();
   if (pipelineView)
   {
     PipelineModel* pipelineModel = pipelineView->getPipelineModel();
-    if (pipelineModel && pipelineRootIndex.isValid())
+    if (pipelineModel && newPipelineRootIndex.isValid())
     {
-      PipelineOutputTextEdit::Pointer pipelineOutTE = pipelineModel->pipelineOutputTextEdit(pipelineRootIndex);
+      PipelineOutputTextEdit::Pointer pipelineOutTE = pipelineModel->pipelineOutputTextEdit(newPipelineRootIndex);
       m_Ui->stdOutWidget->setPipelineOutputTextEdit(pipelineOutTE);
 
-      QVector<PipelineMessage> pipelineMessages = pipelineModel->pipelineMessages(pipelineRootIndex);
+      QVector<PipelineMessage> pipelineMessages = pipelineModel->pipelineMessages(newPipelineRootIndex);
       m_Ui->issuesWidget->displayMessages(pipelineMessages);
     }
   }

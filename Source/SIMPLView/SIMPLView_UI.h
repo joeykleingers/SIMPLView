@@ -298,7 +298,7 @@ class SIMPLView_UI : public QMainWindow
      * @brief handleActivePipelineUpdated
      * @param pipelineRootIndex
      */
-    void handleActivePipelineUpdated(const QModelIndex &pipelineRootIndex);
+    void handleActivePipelineUpdated(const QModelIndex &oldPipelineRootIndex, const QModelIndex &newPipelineRootIndex);
 
     /**
      * @brief handlePreflightFinished
